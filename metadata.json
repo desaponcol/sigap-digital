@@ -1,0 +1,7 @@
+{
+  "name": "SIGAP Digital Conciere",
+  "description": "SIGAP: Solusi Digital Absensi & Laporan Kerja Berbasis Lokasi untuk Aparatur Desa",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
