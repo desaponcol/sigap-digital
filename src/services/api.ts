@@ -1,7 +1,12 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbW3h1BlJsmnz0i7a9aJWSl3NB39K1DkWvnfdUP0ojr8lOmVzAukJd9qW3VJfaiG7D/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOrz0-BYhxyWqTWQ2d5mYeIC8V36WnKzt7hh_DLW4YZrCuRF826ebdGCEKaEs3bIY3/exec';
 
-async function apiFetch(params: Record<string, string>) {
-  const urlParams = new URLSearchParams({ ...params, _t: Date.now().toString() });
+async function apiFetch(params: Record<string, any>) {
+  const cleanParams: Record<string, string> = {};
+  Object.entries(params).forEach(([key, value]) => {
+    cleanParams[key] = String(value);
+  });
+  
+  const urlParams = new URLSearchParams({ ...cleanParams, _t: Date.now().toString() });
   const url = `${SCRIPT_URL}?${urlParams.toString()}`;
   
   try {
@@ -38,7 +43,7 @@ export async function loginUser(email: string, pass: string) {
         success: true,
         user: {
           name: "Ahmad Dani",
-          role: "Digital Concierge",
+          role: "Admin Digital Concierge",
           avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
         }
       };
@@ -86,16 +91,34 @@ export async function saveReport(data: { date: string; detail: string; output: s
 export async function fetchSettings() {
   try {
     const data = await apiFetch({ action: 'getSettings' });
-    return data || {
+    return {
       office_lat: -7.729756740246309,
       office_lng: 111.26261833357766,
-      allowed_radius: 50
+      allowed_radius: 50,
+      nama_desa: '',
+      nama_kecamatan: '',
+      nama_kepala_desa: '',
+      nama_sekretaris_desa: '',
+      ...(data || {})
     };
   } catch (error) {
     return {
       office_lat: -7.729756740246309,
       office_lng: 111.26261833357766,
-      allowed_radius: 50
+      allowed_radius: 50,
+      nama_desa: '',
+      nama_kecamatan: '',
+      nama_kepala_desa: '',
+      nama_sekretaris_desa: ''
     };
+  }
+}
+
+export async function saveSettings(data: any) {
+  try {
+    await apiFetch({ action: 'saveSettings', ...data });
+    return true;
+  } catch (error) {
+    return false;
   }
 }
