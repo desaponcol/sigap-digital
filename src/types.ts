@@ -1,4 +1,4 @@
-export type Screen = 'login' | 'dashboard' | 'presensi' | 'laporan' | 'rekap' | 'settings';
+export type Screen = 'login' | 'dashboard' | 'presensi' | 'laporan' | 'rekap' | 'settings' | 'about';
 
 export interface User {
   name: string;
@@ -9,6 +9,7 @@ export interface User {
 
 export interface AttendanceRecord {
   id: string;
+  email: string;
   date: string;
   status: 'HADIR' | 'IZIN' | 'SAKIT';
   time?: string;
@@ -26,6 +27,7 @@ export interface AttendanceRecord {
 
 export interface ReportRecord {
   id: string;
+  email: string;
   date: string;
   detail: string;
   output: string;

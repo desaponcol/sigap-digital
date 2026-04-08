@@ -1,4 +1,4 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyOrz0-BYhxyWqTWQ2d5mYeIC8V36WnKzt7hh_DLW4YZrCuRF826ebdGCEKaEs3bIY3/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSmCbE1qUiHTtRrXYUkBPCiEH657eA4x-D6RE3APDCmHf8zhbCqozbN0S38W670x0/exec';
 
 async function apiFetch(params: Record<string, any>) {
   const cleanParams: Record<string, string> = {};
@@ -52,25 +52,34 @@ export async function loginUser(email: string, pass: string) {
   }
 }
 
-export async function fetchAttendanceRecords() {
+export async function fetchAttendanceRecords(email?: string) {
   try {
-    const data = await apiFetch({ action: 'getAttendance' });
+    const data = await apiFetch({ action: 'getAttendance', email: email || '' });
     return Array.isArray(data) ? data : [];
   } catch (error) {
     return [];
   }
 }
 
-export async function fetchReportRecords() {
+export async function fetchReportRecords(email?: string) {
   try {
-    const data = await apiFetch({ action: 'getReports' });
+    const data = await apiFetch({ action: 'getReports', email: email || '' });
     return Array.isArray(data) ? data : [];
   } catch (error) {
     return [];
   }
 }
 
-export async function saveAttendance(data: { status: string; location: string; timestamp: string }) {
+export async function fetchUsers() {
+  try {
+    const data = await apiFetch({ action: 'getUsers' });
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+export async function saveAttendance(data: { status: string; location: string; timestamp: string; email: string }) {
   try {
     await apiFetch({ action: 'saveAttendance', ...data });
     return true;
@@ -79,7 +88,7 @@ export async function saveAttendance(data: { status: string; location: string; t
   }
 }
 
-export async function saveReport(data: { date: string; detail: string; output: string }) {
+export async function saveReport(data: { date: string; detail: string; output: string; email: string }) {
   try {
     await apiFetch({ action: 'saveReport', ...data });
     return true;

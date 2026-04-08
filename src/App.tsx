@@ -26,11 +26,14 @@ import {
   Settings,
   Map,
   AlertCircle,
-  Check
+  Check,
+  LogOut,
+  Info,
+  MessageCircle
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { type Screen, type User, type AttendanceRecord, type ReportRecord, type AppSettings } from './types';
-import { fetchAttendanceRecords, fetchReportRecords, saveAttendance, saveReport, loginUser, fetchSettings, saveSettings } from './services/api';
+import { fetchAttendanceRecords, fetchReportRecords, saveAttendance, saveReport, loginUser, fetchSettings, saveSettings, fetchUsers } from './services/api';
 
 // Helper for distance calculation (Haversine formula)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -52,6 +55,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 const MOCK_USER: User = {
   name: "Ahmad Dani",
   role: "Admin Digital Concierge",
+  email: "maswardi75@gmail.com",
   avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
 };
 
@@ -148,8 +152,27 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User>(MOCK_USER);
+
+  // Check for persistent login on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('sigap_user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        setIsLoggedIn(true);
+        setCurrentScreen('dashboard');
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+        localStorage.removeItem('sigap_user');
+      }
+    }
+  }, []);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [reportRecords, setReportRecords] = useState<ReportRecord[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [selectedUserEmail, setSelectedUserEmail] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -161,15 +184,31 @@ export default function App() {
   useEffect(() => {
     if (isLoggedIn) {
       loadRecords();
+      if (user.role.toLowerCase().includes('admin')) {
+        loadUsers();
+      }
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, user.role, selectedUserEmail]);
+
+  const loadUsers = async () => {
+    try {
+      const usersData = await fetchUsers();
+      setAllUsers(usersData || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
 
   const loadRecords = async () => {
     setIsLoading(true);
     try {
+      const emailToFetch = user.role.toLowerCase().includes('admin') 
+        ? (selectedUserEmail || '') 
+        : user.email;
+
       const [attData, repData] = await Promise.all([
-        fetchAttendanceRecords(),
-        fetchReportRecords()
+        fetchAttendanceRecords(emailToFetch),
+        fetchReportRecords(emailToFetch)
       ]);
       setRecords(attData || []);
       setReportRecords(repData || []);
@@ -189,12 +228,21 @@ export default function App() {
     if (result && result.success) {
       setUser(result.user);
       setIsLoggedIn(true);
+      localStorage.setItem('sigap_user', JSON.stringify(result.user));
       navigate('dashboard');
       showNotification('Selamat datang kembali!');
     } else {
       showNotification('Email atau password salah!', 'error');
     }
     setIsLoading(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('sigap_user');
+    setIsLoggedIn(false);
+    setUser(MOCK_USER);
+    setCurrentScreen('login');
+    showNotification('Berhasil keluar aplikasi');
   };
 
   return (
@@ -212,12 +260,14 @@ export default function App() {
               user={user} 
               currentScreen={currentScreen} 
               onNavigate={navigate}
+              onLogout={handleLogout}
               isLoading={isLoading}
             >
               <AnimatePresence mode="wait">
                 {currentScreen === 'dashboard' && <DashboardScreen user={user} onNavigate={navigate} records={records} />}
                 {currentScreen === 'presensi' && (
                   <PresensiScreen 
+                    userEmail={user.email}
                     onSave={() => {
                       loadRecords();
                       showNotification('Presensi berhasil dikirim!');
@@ -228,6 +278,7 @@ export default function App() {
                 )}
                 {currentScreen === 'laporan' && (
                   <LaporanScreen 
+                    userEmail={user.email}
                     onSave={() => {
                       loadRecords();
                       showNotification('Laporan berhasil disimpan!');
@@ -242,9 +293,15 @@ export default function App() {
                     reportRecords={reportRecords}
                     isLoading={isLoading} 
                     onRefresh={loadRecords} 
-                    user={user} 
+                    user={user}
+                    allUsers={allUsers}
+                    selectedUserEmail={selectedUserEmail}
+                    setSelectedUserEmail={setSelectedUserEmail}
+                    selectedMonth={selectedMonth}
+                    setSelectedMonth={setSelectedMonth}
                   />
                 )}
+                {currentScreen === 'about' && <AboutScreen />}
                 {currentScreen === 'settings' && (
                   <SettingsScreen 
                     onSave={() => {
@@ -408,12 +465,14 @@ function MainLayout({
   user, 
   currentScreen, 
   onNavigate,
+  onLogout,
   isLoading
 }: { 
   children: React.ReactNode; 
   user: User; 
   currentScreen: Screen;
   onNavigate: (s: Screen) => void;
+  onLogout: () => void;
   isLoading?: boolean;
 }) {
   return (
@@ -429,13 +488,22 @@ function MainLayout({
             />
             <h1 className="text-2xl font-black text-primary tracking-tight">SIGAP</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {isLoading && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
-            <img 
-              src={user.avatar} 
-              alt={user.name} 
-              className="w-10 h-10 rounded-full border-2 border-primary object-cover shadow-sm"
-            />
+            <div className="flex items-center gap-3">
+              <img 
+                src={user.avatar} 
+                alt={user.name} 
+                className="w-10 h-10 rounded-full border-2 border-primary object-cover shadow-sm"
+              />
+              <button 
+                onClick={onLogout}
+                className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all active:scale-90"
+                title="Keluar"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -469,6 +537,12 @@ function MainLayout({
             icon={<History />} 
             label="Rekap" 
             onClick={() => onNavigate('rekap')} 
+          />
+          <NavItem 
+            active={currentScreen === 'about'} 
+            icon={<Info />} 
+            label="About" 
+            onClick={() => onNavigate('about')} 
           />
           {user.role.toLowerCase().includes('admin') && (
             <NavItem 
@@ -531,11 +605,17 @@ function DashboardScreen({ user, onNavigate, records }: { user: User, onNavigate
 
   const isInRadius = settings && distance !== null && distance <= Number(settings.allowed_radius);
 
-  // Calculate real stats from records
+  // Calculate real stats from records for the CURRENT MONTH
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthlyRecords = records.filter(r => {
+    const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+    return dateStr.startsWith(currentMonth);
+  });
+
   const stats = {
-    hadir: records.filter(r => (r.Status || r.status) === 'HADIR').length,
-    izin: records.filter(r => (r.Status || r.status) === 'IZIN').length,
-    sakit: records.filter(r => (r.Status || r.status) === 'SAKIT').length,
+    hadir: monthlyRecords.filter(r => (r.Status || r.status) === 'HADIR').length,
+    izin: monthlyRecords.filter(r => (r.Status || r.status) === 'IZIN').length,
+    sakit: monthlyRecords.filter(r => (r.Status || r.status) === 'SAKIT').length,
   };
 
   return (
@@ -702,7 +782,7 @@ function StatBox({ icon, value, label, color }: { icon: React.ReactNode, value: 
   );
 }
 
-function PresensiScreen({ onSave, onError }: { onSave: () => void, onError: (msg: string) => void }) {
+function PresensiScreen({ onSave, onError, userEmail }: { onSave: () => void, onError: (msg: string) => void, userEmail: string }) {
   const [selected, setSelected] = useState<'HADIR' | 'IZIN' | 'SAKIT'>('HADIR');
   const [location, setLocation] = useState('Mencari lokasi...');
   const [distance, setDistance] = useState<number | null>(null);
@@ -711,7 +791,8 @@ function PresensiScreen({ onSave, onError }: { onSave: () => void, onError: (msg
 
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
 
-  const refreshLocation = () => {
+  const refreshLocation = (currentSettings?: any) => {
+    const activeSettings = currentSettings || settings;
     setLocation('Mencari lokasi...');
     setDistance(null);
     if (navigator.geolocation) {
@@ -719,8 +800,8 @@ function PresensiScreen({ onSave, onError }: { onSave: () => void, onError: (msg
         const { latitude, longitude } = position.coords;
         setCoords({ lat: latitude, lng: longitude });
         setLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-        if (settings) {
-          const d = getDistance(latitude, longitude, Number(settings.office_lat), Number(settings.office_lng));
+        if (activeSettings) {
+          const d = getDistance(latitude, longitude, Number(activeSettings.office_lat), Number(activeSettings.office_lng));
           setDistance(d);
         }
       }, (error) => {
@@ -734,7 +815,7 @@ function PresensiScreen({ onSave, onError }: { onSave: () => void, onError: (msg
     const init = async () => {
       const s = await fetchSettings();
       setSettings(s);
-      refreshLocation();
+      refreshLocation(s);
     };
     init();
   }, []);
@@ -742,16 +823,23 @@ function PresensiScreen({ onSave, onError }: { onSave: () => void, onError: (msg
   const isInRadius = settings && distance !== null && distance <= Number(settings.allowed_radius);
 
   const handleSubmit = async () => {
-    if (!isInRadius && selected === 'HADIR') {
-      onError('Anda berada di luar radius kantor!');
-      return;
+    if (selected === 'HADIR') {
+      if (distance === null) {
+        onError('Mohon tunggu, sedang mencari lokasi GPS...');
+        return;
+      }
+      if (!isInRadius) {
+        onError(`Anda berada di luar radius kantor! (Jarak: ${Math.round(distance)}m, Maks: ${settings?.allowed_radius}m)`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
     const success = await saveAttendance({
       status: selected,
       location,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      email: userEmail
     });
     
     if (success) {
@@ -900,7 +988,7 @@ function StatusOption({ active, onClick, label, icon, color }: { active: boolean
   );
 }
 
-function LaporanScreen({ onSave, onError }: { onSave: () => void, onError: (msg: string) => void }) {
+function LaporanScreen({ onSave, onError, userEmail }: { onSave: () => void, onError: (msg: string) => void, userEmail: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -915,7 +1003,7 @@ function LaporanScreen({ onSave, onError }: { onSave: () => void, onError: (msg:
       return;
     }
     setIsSubmitting(true);
-    const success = await saveReport(formData);
+    const success = await saveReport({ ...formData, email: userEmail });
     if (success) {
       onSave();
     } else {
@@ -1045,6 +1133,12 @@ function SettingsScreen({ onSave, onError }: { onSave: () => void, onError: (msg
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isNaN(settings.office_lat) || isNaN(settings.office_lng) || isNaN(settings.allowed_radius)) {
+      onError('Mohon isi semua parameter lokasi dengan benar');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const success = await saveSettings(settings);
@@ -1095,8 +1189,11 @@ function SettingsScreen({ onSave, onError }: { onSave: () => void, onError: (msg
                 <input 
                   type="number" 
                   step="any"
-                  value={settings.office_lat}
-                  onChange={(e) => setSettings({ ...settings, office_lat: parseFloat(e.target.value) })}
+                  value={isNaN(settings.office_lat) ? '' : settings.office_lat}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSettings({ ...settings, office_lat: val === '' ? NaN : parseFloat(val) });
+                  }}
                   className="w-full p-4 bg-surface border border-outline-variant/20 rounded-2xl text-on-surface font-medium focus:ring-2 focus:ring-primary/20 transition-all text-sm"
                   required
                 />
@@ -1106,8 +1203,11 @@ function SettingsScreen({ onSave, onError }: { onSave: () => void, onError: (msg
                 <input 
                   type="number" 
                   step="any"
-                  value={settings.office_lng}
-                  onChange={(e) => setSettings({ ...settings, office_lng: parseFloat(e.target.value) })}
+                  value={isNaN(settings.office_lng) ? '' : settings.office_lng}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSettings({ ...settings, office_lng: val === '' ? NaN : parseFloat(val) });
+                  }}
                   className="w-full p-4 bg-surface border border-outline-variant/20 rounded-2xl text-on-surface font-medium focus:ring-2 focus:ring-primary/20 transition-all text-sm"
                   required
                 />
@@ -1118,8 +1218,11 @@ function SettingsScreen({ onSave, onError }: { onSave: () => void, onError: (msg
               <label className="block text-[10px] font-black uppercase tracking-widest text-secondary ml-1">Radius Aman (Meter)</label>
               <input 
                 type="number" 
-                value={settings.allowed_radius}
-                onChange={(e) => setSettings({ ...settings, allowed_radius: parseInt(e.target.value) })}
+                value={isNaN(settings.allowed_radius) ? '' : settings.allowed_radius}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSettings({ ...settings, allowed_radius: val === '' ? NaN : parseInt(val) });
+                }}
                 className="w-full p-4 bg-surface border border-outline-variant/20 rounded-2xl text-on-surface font-medium focus:ring-2 focus:ring-primary/20 transition-all text-sm"
                 required
               />
@@ -1197,21 +1300,123 @@ function SettingsScreen({ onSave, onError }: { onSave: () => void, onError: (msg
   );
 }
 
+function AboutScreen() {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8 pb-12"
+    >
+      <section className="space-y-1">
+        <h2 className="text-2xl font-extrabold text-on-surface tracking-tight">Tentang Aplikasi</h2>
+        <p className="text-secondary font-medium text-base leading-relaxed">Informasi sistem dan pengembang</p>
+      </section>
+
+      <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-sm border border-outline-variant/10 space-y-8">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-24 h-24 bg-surface rounded-3xl p-4 shadow-inner border border-outline-variant/10">
+            <img 
+              src="https://res.cloudinary.com/maswardi/image/upload/v1769768658/afiks_gwju4y.png" 
+              alt="SIGAP Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div>
+            <h3 className="text-3xl font-black text-dark-accent tracking-tighter">SIGAP</h3>
+            <p className="text-[10px] uppercase tracking-[0.4em] text-primary font-black">Digital Concierge Desa</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h4 className="font-black text-on-surface uppercase tracking-widest text-xs border-l-4 border-primary pl-3">Deskripsi Aplikasi</h4>
+          <p className="text-on-surface-variant text-sm leading-relaxed font-medium">
+            SIGAP (Sistem Informasi Geografis & Absensi Pegawai) adalah solusi digital mutakhir yang dirancang khusus untuk meningkatkan efisiensi administrasi dan kedisiplinan pegawai di lingkungan Pemerintah Desa. Dengan integrasi teknologi Geofencing, SIGAP memastikan presensi dilakukan secara akurat di lokasi kerja yang telah ditentukan.
+          </p>
+        </div>
+
+        <div className="h-px bg-outline-variant/10" />
+
+        <div className="space-y-6">
+          <h4 className="font-black text-on-surface uppercase tracking-widest text-xs border-l-4 border-secondary pl-3">Profil Pengembang</h4>
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-6 h-6 text-secondary" />
+            </div>
+            <div className="space-y-2">
+              <p className="font-bold text-on-surface">Arunika Kreatif Media</p>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                Partner transformasi digital terpercaya untuk instansi pemerintah dan swasta, berfokus pada pengembangan solusi perangkat lunak yang inovatif, user-friendly, dan berdampak nyata.
+              </p>
+            </div>
+          </div>
+
+          <a 
+            href="https://wa.me/6285150617732" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-between p-4 bg-emerald-50 rounded-2xl border border-emerald-100 group active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Hubungi Kami</p>
+                <p className="text-sm font-bold text-emerald-900">WhatsApp Support</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-emerald-400 group-hover:translate-x-1 transition-transform" />
+          </a>
+        </div>
+      </div>
+
+      <footer className="text-center space-y-2 opacity-40">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-outline">SIGAP v1.0.0 Prestige</p>
+        <p className="text-[9px] font-medium text-outline">© 2024 Arunika Kreatif Media</p>
+      </footer>
+    </motion.div>
+  );
+}
+
 function RekapScreen({ 
   records, 
   reportRecords,
   isLoading, 
   onRefresh, 
-  user 
+  user,
+  allUsers,
+  selectedUserEmail,
+  setSelectedUserEmail,
+  selectedMonth,
+  setSelectedMonth
 }: { 
   records: AttendanceRecord[], 
   reportRecords: ReportRecord[],
   isLoading?: boolean, 
   onRefresh: () => void, 
-  user: User 
+  user: User,
+  allUsers: User[],
+  selectedUserEmail: string,
+  setSelectedUserEmail: (email: string) => void,
+  selectedMonth: string,
+  setSelectedMonth: (month: string) => void
 }) {
   const [activeTab, setActiveTab] = useState<'RIWAYAT' | 'LAPORAN'>('RIWAYAT');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const isAdmin = user.role.toLowerCase().includes('admin');
+
+  // Filter records by month
+  const filteredRecords = records.filter(r => {
+    const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+    return dateStr.startsWith(selectedMonth);
+  });
+
+  const filteredReports = reportRecords.filter(r => {
+    const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+    return dateStr.startsWith(selectedMonth);
+  });
 
   const generatePDF = async () => {
     if (isGenerating) return;
@@ -1225,6 +1430,13 @@ function RekapScreen({
       const pageHeight = doc.internal.pageSize.getHeight();
       const totalWidth = pageWidth - 28; // 14 margin on each side
 
+      // Determine target user info
+      let targetUser = user;
+      if (isAdmin && selectedUserEmail) {
+        const found = allUsers.find(u => u.email === selectedUserEmail);
+        if (found) targetUser = found;
+      }
+
       // Set default font to helvetica (Arial alternative)
       doc.setFont('helvetica');
       
@@ -1236,17 +1448,18 @@ function RekapScreen({
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const startY = 35;
-      doc.text(`Nama: ${user.name}`, 14, startY);
-      doc.text(`Jabatan: ${user.role}`, 14, startY + 5);
-      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} pukul ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`, 14, startY + 10);
+      doc.text(`Nama: ${targetUser.name}`, 14, startY);
+      doc.text(`Jabatan: ${targetUser.role}`, 14, startY + 5);
+      doc.text(`Periode: ${new Date(selectedMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`, 14, startY + 10);
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} pukul ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`, 14, startY + 15);
       
       // Sorting records by date (ascending)
-      const sortedRecords = [...records].sort((a, b) => 
+      const sortedRecords = [...filteredRecords].sort((a, b) => 
         parseDate(a.Date || a.date || a.tanggal || a.timestamp) - 
         parseDate(b.Date || b.date || b.tanggal || b.timestamp)
       );
       
-      const sortedReports = [...reportRecords].sort((a, b) => 
+      const sortedReports = [...filteredReports].sort((a, b) => 
         parseDate(a.Date || a.date || a.tanggal || a.timestamp) - 
         parseDate(b.Date || b.date || b.tanggal || b.timestamp)
       );
@@ -1254,7 +1467,7 @@ function RekapScreen({
       // Attendance Table
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('1. Rekap Presensi', 14, startY + 20);
+      doc.text('1. Rekap Presensi', 14, startY + 25);
       
       const attColumn = ["No", "Tanggal", "Status", "Lokasi"];
       const attRows = sortedRecords.map((record: any, index) => [
@@ -1267,7 +1480,7 @@ function RekapScreen({
       autoTable(doc, {
         head: [attColumn],
         body: attRows,
-        startY: startY + 25,
+        startY: startY + 30,
         theme: 'grid',
         styles: { fontSize: 10, font: 'helvetica' },
         headStyles: { fillColor: [115, 92, 0], fontStyle: 'bold' }, // Primary color
@@ -1280,7 +1493,7 @@ function RekapScreen({
       });
 
       // Report Table
-      let finalY = (doc as any).lastAutoTable.finalY || (startY + 25);
+      let finalY = (doc as any).lastAutoTable.finalY || (startY + 30);
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -1323,7 +1536,7 @@ function RekapScreen({
       doc.text('Pembuat Laporan,', pageWidth * 0.25, sigY, { align: 'center' });
       doc.text('Verifikator Laporan,', pageWidth * 0.75, sigY, { align: 'center' });
       
-      doc.text(`(${user.name})`, pageWidth * 0.25, sigY + 25, { align: 'center' });
+      doc.text(`(${targetUser.name})`, pageWidth * 0.25, sigY + 25, { align: 'center' });
       doc.text(`(${secretaryName})`, pageWidth * 0.75, sigY + 25, { align: 'center' });
 
       // Row 2: Mengetahui Kepala Desa (Centered)
@@ -1340,7 +1553,7 @@ function RekapScreen({
         doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
       }
 
-      doc.save(`Laporan_SIGAP_${user.name.replace(/\s+/g, '_')}.pdf`);
+      doc.save(`Laporan_SIGAP_${targetUser.name.replace(/\s+/g, '_')}_${selectedMonth}.pdf`);
     } catch (error) {
       console.error('PDF Generation Error:', error);
     } finally {
@@ -1358,7 +1571,9 @@ function RekapScreen({
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-extrabold text-on-surface tracking-tight">Rekap Presensi & Laporan</h2>
-            <p className="text-secondary font-medium text-base leading-relaxed">Tinjau aktivitas dan performa kerja Anda</p>
+            <p className="text-secondary font-medium text-base leading-relaxed">
+              {isAdmin ? 'Monitoring aktivitas dan performa pegawai' : 'Tinjau aktivitas dan performa kerja Anda'}
+            </p>
           </div>
           <button 
             onClick={onRefresh}
@@ -1370,8 +1585,27 @@ function RekapScreen({
         </div>
       </section>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 flex bg-surface-container-lowest p-1.5 rounded-2xl border border-outline-variant/10 shadow-sm">
+      {/* Admin Filters */}
+      {isAdmin && (
+        <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/10 shadow-sm space-y-4">
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-secondary ml-1">Pilih Pegawai</label>
+            <select 
+              value={selectedUserEmail}
+              onChange={(e) => setSelectedUserEmail(e.target.value)}
+              className="w-full p-4 bg-surface border border-outline-variant/20 rounded-2xl text-on-surface font-bold focus:ring-2 focus:ring-primary/20 transition-all text-sm"
+            >
+              <option value="">Semua Pegawai</option>
+              {allUsers.map(u => (
+                <option key={u.email} value={u.email}>{u.name} ({u.role})</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 flex bg-surface-container-lowest p-1.5 rounded-2xl border border-outline-variant/10 shadow-sm">
           <button 
             onClick={() => setActiveTab('RIWAYAT')}
             className={cn(
@@ -1391,10 +1625,25 @@ function RekapScreen({
             Laporan
           </button>
         </div>
-        <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm">
+        <div className="bg-surface-container-lowest p-1.5 rounded-2xl border border-outline-variant/10 shadow-sm">
+          <input 
+            type="month" 
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="w-full h-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-primary text-center focus:ring-0"
+          />
+        </div>
+      </div>
+
+      <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/10 flex justify-between items-center shadow-sm">
+        <div className="flex flex-col">
+          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-secondary mb-1">Total Data</span>
+          <span className="text-xl font-black text-on-surface">{activeTab === 'RIWAYAT' ? filteredRecords.length : filteredReports.length} Record</span>
+        </div>
+        <div className="flex flex-col items-end">
           <span className="text-[8px] font-black uppercase tracking-[0.2em] text-primary mb-1">Kehadiran</span>
-          <span className="text-2xl font-black text-primary">
-            {records.length > 0 ? `${Math.round((records.filter(r => r.status === 'HADIR').length / records.length) * 100)}%` : '0%'}
+          <span className="text-xl font-black text-primary">
+            {filteredRecords.length > 0 ? `${Math.round((filteredRecords.filter(r => r.status === 'HADIR').length / filteredRecords.length) * 100)}%` : '0%'}
           </span>
         </div>
       </div>
@@ -1405,19 +1654,19 @@ function RekapScreen({
             {activeTab === 'RIWAYAT' ? 'Aktivitas Terakhir' : 'Laporan Terakhir'}
           </h3>
           <span className="text-[10px] font-black text-primary uppercase tracking-widest">
-            {new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            {new Date(selectedMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
           </span>
         </div>
 
         <div className="space-y-3">
           {activeTab === 'RIWAYAT' ? (
             <>
-              {records.length === 0 && !isLoading && (
+              {filteredRecords.length === 0 && !isLoading && (
                 <div className="text-center py-12 bg-surface-container-low rounded-xl border border-dashed border-outline-variant">
-                  <p className="text-sm text-secondary font-medium">Belum ada data presensi.</p>
+                  <p className="text-sm text-secondary font-medium">Belum ada data presensi untuk periode ini.</p>
                 </div>
               )}
-              {[...records]
+              {[...filteredRecords]
                 .sort((a, b) => parseDate(b.Date || b.date || b.tanggal || b.timestamp) - parseDate(a.Date || a.date || a.tanggal || a.timestamp))
                 .map((record) => (
                 <div key={record.id} className="bg-surface-container-lowest p-5 rounded-xl flex items-center justify-between border border-outline-variant/10 shadow-sm group active:scale-[0.98] transition-all">
@@ -1444,6 +1693,7 @@ function RekapScreen({
                         </span>
                       </div>
                       <p className="text-[10px] text-secondary font-bold uppercase tracking-widest">
+                        {isAdmin && record.email ? `${record.email} • ` : ''}
                         {record.Location || record.location || record.lokasi || record.Time || record.time || record.reason}
                       </p>
                     </div>
@@ -1454,12 +1704,12 @@ function RekapScreen({
             </>
           ) : (
             <>
-              {reportRecords.length === 0 && !isLoading && (
+              {filteredReports.length === 0 && !isLoading && (
                 <div className="text-center py-12 bg-surface-container-low rounded-xl border border-dashed border-outline-variant">
-                  <p className="text-sm text-secondary font-medium">Belum ada data laporan.</p>
+                  <p className="text-sm text-secondary font-medium">Belum ada data laporan untuk periode ini.</p>
                 </div>
               )}
-              {[...reportRecords]
+              {[...filteredReports]
                 .sort((a, b) => parseDate(b.Date || b.date || b.tanggal || b.timestamp) - parseDate(a.Date || a.date || a.tanggal || a.timestamp))
                 .map((report) => (
                 <div key={report.id} className="bg-surface-container-lowest p-5 rounded-xl space-y-3 border border-outline-variant/10 shadow-sm group active:scale-[0.98] transition-all">
@@ -1475,6 +1725,7 @@ function RekapScreen({
                     <ChevronRight className="w-5 h-5 text-outline-variant group-hover:text-primary transition-colors" />
                   </div>
                   <div className="space-y-2">
+                    {isAdmin && report.email && <p className="text-[10px] font-black text-primary uppercase tracking-widest">{report.email}</p>}
                     <p className="text-xs text-on-surface-variant font-medium line-clamp-2">{report.Detail || report.detail}</p>
                     <div className="flex items-center gap-2">
                       <div className="px-2 py-0.5 bg-secondary/10 text-secondary text-[8px] font-black uppercase rounded-full">Output</div>
@@ -1490,7 +1741,7 @@ function RekapScreen({
 
       <button 
         onClick={generatePDF}
-        disabled={isGenerating || (records.length === 0 && reportRecords.length === 0)}
+        disabled={isGenerating || (filteredRecords.length === 0 && filteredReports.length === 0)}
         className="fixed bottom-28 right-6 bg-gradient-to-br from-primary to-primary-container text-white p-4 rounded-2xl shadow-2xl hover:scale-105 active:scale-90 transition-all flex items-center gap-2 z-40 disabled:opacity-50"
       >
         {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}

@@ -40,8 +40,8 @@ function setupSheets() {
   
   const sheets = [
     { name: 'users', headers: ['email', 'password', 'name', 'role', 'avatar'] },
-    { name: 'attendance', headers: ['timestamp', 'status', 'location'] },
-    { name: 'reports', headers: ['date', 'detail', 'output', 'timestamp'] },
+    { name: 'attendance', headers: ['timestamp', 'email', 'status', 'location'] },
+    { name: 'reports', headers: ['date', 'email', 'detail', 'output', 'timestamp'] },
     { name: 'settings', headers: ['office_lat', 'office_lng', 'allowed_radius', 'nama_desa', 'nama_kecamatan', 'nama_kepala_desa', 'nama_sekretaris_desa'] }
   ];
 
@@ -61,7 +61,7 @@ function setupSheets() {
   // Add a default user if users sheet is empty (except header)
   const userSheet = ss.getSheetByName('users');
   if (userSheet.getLastRow() === 1) {
-    userSheet.appendRow(['maswardi75@gmail.com', '123456', 'Ahmad Dani', 'Admin Digital Concierge', '']);
+    userSheet.appendRow(['maswardi75@gmail.com', '123456', 'Ahmad Dani', 'Admin', '']);
   }
 
   return "Setup Berhasil!";
@@ -99,19 +99,15 @@ function doGet(e) {
     if (action === 'login') {
       const email = e.parameter.email;
       const pass = e.parameter.pass;
-      const sheet = getSheet('users', ['email', 'password', 'name', 'role', 'avatar']);
+      const sheet = getSheet('users');
       
-      // Ensure headers if missing
-      if (sheet.getLastRow() === 1 && sheet.getRange(1, 1).getValue() === "") {
-        sheet.getRange(1, 1, 1, 5).setValues([['email', 'password', 'name', 'role', 'avatar']]);
-      }
-
       const data = sheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
         if (String(data[i][0]).toLowerCase() === String(email).toLowerCase() && String(data[i][1]) === String(pass)) {
           return output({
             success: true,
             user: {
+              email: data[i][0],
               name: data[i][2],
               role: data[i][3],
               avatar: data[i][4] || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
@@ -122,16 +118,29 @@ function doGet(e) {
       return output({ success: false });
     }
 
+    // --- GET USERS (Admin only) ---
+    if (action === 'getUsers') {
+      const sheet = getSheet('users');
+      const data = getRowsData(sheet);
+      return output(data);
+    }
+
     // --- ATTENDANCE ---
     if (action === 'getAttendance') {
-      const sheet = getSheet('attendance', ['timestamp', 'status', 'location']);
-      return output(getRowsData(sheet));
+      const sheet = getSheet('attendance');
+      const email = e.parameter.email;
+      let data = getRowsData(sheet);
+      if (email) {
+        data = data.filter(r => String(r.email).toLowerCase() === String(email).toLowerCase());
+      }
+      return output(data);
     }
 
     if (action === 'saveAttendance') {
-      const sheet = getSheet('attendance', ['timestamp', 'status', 'location']);
+      const sheet = getSheet('attendance');
       sheet.appendRow([
         e.parameter.timestamp || new Date().toISOString(),
+        e.parameter.email || "",
         e.parameter.status || "",
         e.parameter.location || ""
       ]);
@@ -140,14 +149,20 @@ function doGet(e) {
 
     // --- REPORTS ---
     if (action === 'getReports') {
-      const sheet = getSheet('reports', ['date', 'detail', 'output', 'timestamp']);
-      return output(getRowsData(sheet));
+      const sheet = getSheet('reports');
+      const email = e.parameter.email;
+      let data = getRowsData(sheet);
+      if (email) {
+        data = data.filter(r => String(r.email).toLowerCase() === String(email).toLowerCase());
+      }
+      return output(data);
     }
 
     if (action === 'saveReport') {
-      const sheet = getSheet('reports', ['date', 'detail', 'output', 'timestamp']);
+      const sheet = getSheet('reports');
       sheet.appendRow([
         e.parameter.date || "",
+        e.parameter.email || "",
         e.parameter.detail || "",
         e.parameter.output || "",
         new Date().toISOString()
