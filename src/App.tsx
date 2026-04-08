@@ -1330,7 +1330,7 @@ function AboutScreen() {
 
         <div className="space-y-4">
           <h4 className="font-black text-on-surface uppercase tracking-widest text-xs border-l-4 border-primary pl-3">Deskripsi Aplikasi</h4>
-          <p className="text-on-surface-variant text-sm leading-relaxed font-medium">
+          <p className="text-on-surface-variant text-sm leading-relaxed font-medium text-justify">
             SIGAP (Sistem Informasi Geografis & Absensi Pegawai) adalah solusi digital mutakhir yang dirancang khusus untuk meningkatkan efisiensi administrasi dan kedisiplinan pegawai di lingkungan Pemerintah Desa. Dengan integrasi teknologi Geofencing, SIGAP memastikan presensi dilakukan secara akurat di lokasi kerja yang telah ditentukan.
           </p>
         </div>
