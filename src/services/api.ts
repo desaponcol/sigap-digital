@@ -1,4 +1,4 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwSmCbE1qUiHTtRrXYUkBPCiEH657eA4x-D6RE3APDCmHf8zhbCqozbN0S38W670x0/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYgVGPGM2su_Bp6wtt2jIKuXRrdB3JmXXijmxg-lk25g9yIdP12pyprW2scMhjVCTt/exec';
 
 async function apiFetch(params: Record<string, any>) {
   const cleanParams: Record<string, string> = {};

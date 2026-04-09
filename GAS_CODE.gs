@@ -138,8 +138,10 @@ function doGet(e) {
 
     if (action === 'saveAttendance') {
       const sheet = getSheet('attendance');
+      const now = new Date();
+      const formattedTimestamp = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy HH:mm:ss");
       sheet.appendRow([
-        e.parameter.timestamp || new Date().toISOString(),
+        formattedTimestamp,
         e.parameter.email || "",
         e.parameter.status || "",
         e.parameter.location || ""
@@ -160,12 +162,22 @@ function doGet(e) {
 
     if (action === 'saveReport') {
       const sheet = getSheet('reports');
+      const now = new Date();
+      const formattedTimestamp = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy HH:mm:ss");
+      
+      let reportDate = e.parameter.date || "";
+      // Convert YYYY-MM-DD to DD/MM/YYYY if needed
+      if (reportDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const parts = reportDate.split('-');
+        reportDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
       sheet.appendRow([
-        e.parameter.date || "",
+        reportDate,
         e.parameter.email || "",
         e.parameter.detail || "",
         e.parameter.output || "",
-        new Date().toISOString()
+        formattedTimestamp
       ]);
       return output({ success: true });
     }

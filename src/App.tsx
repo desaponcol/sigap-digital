@@ -115,6 +115,28 @@ const formatDateIndo = (dateVal: any) => {
   return String(dateVal);
 };
 
+const formatDateTimeIndo = (dateVal: any) => {
+  if (!dateVal || dateVal === '-') return '-';
+  
+  try {
+    const timestamp = parseDate(dateVal);
+    if (!timestamp) return String(dateVal);
+    
+    const date = new Date(timestamp);
+    return new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).format(date) + ' WIB';
+  } catch (e) {
+    return String(dateVal);
+  }
+};
+
 const parseDate = (dateVal: any): number => {
   if (!dateVal || dateVal === '-') return 0;
   try {
@@ -606,10 +628,14 @@ function DashboardScreen({ user, onNavigate, records }: { user: User, onNavigate
   const isInRadius = settings && distance !== null && distance <= Number(settings.allowed_radius);
 
   // Calculate real stats from records for the CURRENT MONTH
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   const monthlyRecords = records.filter(r => {
     const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
-    return dateStr.startsWith(currentMonth);
+    const timestamp = parseDate(dateStr);
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return monthStr === currentMonth;
   });
 
   const stats = {
@@ -1410,12 +1436,20 @@ function RekapScreen({
   // Filter records by month
   const filteredRecords = records.filter(r => {
     const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
-    return dateStr.startsWith(selectedMonth);
+    const timestamp = parseDate(dateStr);
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return monthStr === selectedMonth;
   });
 
   const filteredReports = reportRecords.filter(r => {
     const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
-    return dateStr.startsWith(selectedMonth);
+    const timestamp = parseDate(dateStr);
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return monthStr === selectedMonth;
   });
 
   const generatePDF = async () => {
@@ -1681,9 +1715,16 @@ function RekapScreen({
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-base font-black text-on-surface">
-                          {formatDateIndo(record.Date || record.date || record.tanggal || record.timestamp)}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-base font-black text-on-surface">
+                            {formatDateIndo(record.Date || record.date || record.tanggal || record.timestamp)}
+                          </span>
+                          <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
+                            {formatDateTimeIndo(record.timestamp || record.Timestamp || record.Date || record.date).split(' ').pop() === 'WIB' 
+                              ? formatDateTimeIndo(record.timestamp || record.Timestamp || record.Date || record.date).split(' ').slice(-2).join(' ') 
+                              : ''}
+                          </span>
+                        </div>
                         <span className={cn(
                           "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
                           (record.Status || record.status) === 'HADIR' ? "bg-emerald-100 text-emerald-700" : 
@@ -1718,9 +1759,16 @@ function RekapScreen({
                       <div className="w-10 h-10 rounded-full bg-secondary/5 text-secondary flex items-center justify-center">
                         <FileText className="w-5 h-5" />
                       </div>
-                      <span className="text-base font-black text-on-surface">
-                        {formatDateIndo(report.Date || report.date || report.tanggal)}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-base font-black text-on-surface">
+                          {formatDateIndo(report.Date || report.date || report.tanggal)}
+                        </span>
+                        <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
+                          {formatDateTimeIndo(report.timestamp || report.Timestamp).split(' ').pop() === 'WIB' 
+                            ? formatDateTimeIndo(report.timestamp || report.Timestamp).split(' ').slice(-2).join(' ') 
+                            : ''}
+                        </span>
+                      </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-outline-variant group-hover:text-primary transition-colors" />
                   </div>
