@@ -1,4 +1,4 @@
-const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUkUSK-nDl2Sng87vPlfp1fmc9NELNuUmAkgGjhL91r1SI7BbVal4Fb-hPKOIFQUHxTw/exec';
+const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvfqNulXBgBY8VjzptBnrOSZvnLab99GerwE1ZfZhSeBG2yahkNWPIACOfnSnOF2jKhA/exec';
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
@@ -15,14 +15,10 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
     
     if (codeToFetch) {
       try {
-        // Tambahkan cache buster (_t) agar tidak mengambil data lama
+        // Gunakan fetch paling sederhana untuk menghindari preflight CORS
         const fetchUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}&_t=${Date.now()}`;
         
-        const response = await fetch(fetchUrl, {
-          method: 'GET',
-          mode: 'cors',
-          redirect: 'follow'
-        });
+        const response = await fetch(fetchUrl);
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
@@ -31,8 +27,9 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
         try {
           data = JSON.parse(text);
         } catch (e) {
+          // Jika gagal parse, mungkin Google minta login atau error HTML
           console.error("Master response is not JSON:", text);
-          return { success: false, error: "Server Master mengirim format salah" };
+          return { success: false, error: "Izin Script Master Salah (Harus Anyone)" };
         }
         
         if (data.success && data.config?.script_url) {
