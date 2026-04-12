@@ -1605,7 +1605,7 @@ function RekapScreen({
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150);
-        const footerText = `printed by sigap Digital Concierge pada ${new Date().toLocaleString('id-ID')}`;
+        const footerText = `Printed by Sigap v1.1.0 pada ${new Date().toLocaleString('id-ID')}`;
         doc.text(footerText, pageWidth / 2, pageHeight - 10, { align: 'center' });
       }
 
