@@ -179,11 +179,13 @@ export default function App() {
   useEffect(() => {
     // Inisialisasi konfigurasi desa di awal
     const init = async () => {
-      console.log("Initializing village config...");
-      await initVillageConfig();
-      const name = localStorage.getItem('sigap_village_name');
-      console.log("Village name loaded:", name);
-      setVillageName(name);
+      setIsLoading(true);
+      const result = await initVillageConfig();
+      if (!result.success) {
+        showNotification(result.error || 'Gagal memuat data desa', 'error');
+      }
+      setVillageName(localStorage.getItem('sigap_village_name'));
+      setIsLoading(false);
     };
     init();
 
