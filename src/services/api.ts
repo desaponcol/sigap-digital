@@ -51,7 +51,8 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
 }
 
 async function apiFetch(params: Record<string, any>) {
-  const SCRIPT_URL = await initVillageConfig();
+  await initVillageConfig();
+  const SCRIPT_URL = localStorage.getItem('sigap_script_url') || DEFAULT_SCRIPT_URL;
   const cleanParams: Record<string, string> = {};
   Object.entries(params).forEach(([key, value]) => {
     cleanParams[key] = String(value);
