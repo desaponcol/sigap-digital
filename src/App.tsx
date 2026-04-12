@@ -398,11 +398,11 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
       <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[40%] bg-secondary-container/10 rounded-full blur-[120px]" />
 
       <div className="w-full max-w-md space-y-10">
-        <div className="text-center space-y-4">
+        <div className="text-center flex flex-col items-center">
           <motion.div 
-            initial={{ scale: 0.8, rotate: -5 }}
-            animate={{ scale: 1, rotate: 3 }}
-            className="inline-flex items-center justify-center w-24 h-24 mb-2 overflow-hidden"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex items-center justify-center w-20 h-20 mb-1"
           >
             <img 
               src="https://res.cloudinary.com/maswardi/image/upload/v1769768658/afiks_gwju4y.png" 
@@ -411,11 +411,11 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
               referrerPolicy="no-referrer"
             />
           </motion.div>
-          <h1 className="text-5xl font-black tracking-tighter text-dark-accent">SIGAP</h1>
-          <p className="text-[11px] uppercase tracking-[0.4em] text-primary font-black">Digital Concierge Desa</p>
+          <h1 className="text-4xl font-black tracking-tighter text-dark-accent leading-none mb-1">SIGAP</h1>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-primary font-black leading-none mb-2">Digital Concierge Desa</p>
           {villageName && (
-            <div className="mt-2 inline-block px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">{villageName}</span>
+            <div className="inline-block px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
+              <span className="text-[9px] font-black text-primary uppercase tracking-widest">{villageName}</span>
             </div>
           )}
         </div>
