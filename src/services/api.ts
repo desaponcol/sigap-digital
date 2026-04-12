@@ -1,4 +1,4 @@
-const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRHy2S1U89g4X_de2qSzlWrYHptrnmuqaR4JAuVkQtqN1sv-CHAzo2Fydz9nHGbqihVQ/exec';
+const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUkUSK-nDl2Sng87vPlfp1fmc9NELNuUmAkgGjhL91r1SI7BbVal4Fb-hPKOIFQUHxTw/exec';
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
@@ -9,37 +9,43 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
   let currentCode = localStorage.getItem('sigap_village_code');
   let currentUrl = localStorage.getItem('sigap_script_url');
 
-  console.log("Village Discovery:", { urlCode: villageCode, savedCode: currentCode });
-
   // Jika ada kode desa baru di URL atau belum ada URL tersimpan, ambil dari Master
   if ((villageCode && villageCode !== currentCode) || !currentUrl) {
     const codeToFetch = villageCode || currentCode;
     
     if (codeToFetch) {
-      console.log("Fetching config for:", codeToFetch);
       try {
-        const fetchUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}`;
-        const response = await fetch(fetchUrl);
+        // Tambahkan cache buster (_t) agar tidak mengambil data lama
+        const fetchUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}&_t=${Date.now()}`;
         
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const response = await fetch(fetchUrl, {
+          method: 'GET',
+          mode: 'cors',
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const text = await response.text();
-        const data = JSON.parse(text);
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("Master response is not JSON:", text);
+          return { success: false, error: "Server Master mengirim format salah" };
+        }
         
         if (data.success && data.config?.script_url) {
-          console.log("Config found:", data.config.name);
           localStorage.setItem('sigap_village_code', codeToFetch);
           localStorage.setItem('sigap_script_url', data.config.script_url);
           localStorage.setItem('sigap_village_name', data.config.name || '');
           return { success: true };
         } else {
-          const errorMsg = data.error || "Desa tidak ditemukan di Master";
-          console.warn("Master API Warning:", errorMsg);
-          return { success: false, error: errorMsg };
+          return { success: false, error: data.error || "Desa tidak terdaftar di Master" };
         }
       } catch (e) {
         console.error("Master API Connection Failed:", e);
-        return { success: false, error: "Gagal terhubung ke Server Master" };
+        return { success: false, error: "Koneksi Master Gagal (Cek Izin Script)" };
       }
     }
   }
