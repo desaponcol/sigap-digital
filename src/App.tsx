@@ -392,30 +392,34 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex flex-col items-center justify-center min-h-screen p-6 relative z-10"
+      className="flex flex-col items-center justify-center min-h-screen p-6 relative z-10 bg-[#0A0B0E]"
     >
-      <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[40%] bg-primary-container/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[40%] bg-secondary-container/10 rounded-full blur-[120px]" />
+      <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
 
-      <div className="w-full max-w-md space-y-10">
+      <div className="w-full max-w-md space-y-8">
         <div className="text-center flex flex-col items-center">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex items-center justify-center w-20 h-20 mb-1"
+            className="flex items-center justify-center w-20 h-20 mb-2"
           >
             <img 
               src="https://res.cloudinary.com/maswardi/image/upload/v1769768658/afiks_gwju4y.png" 
               alt="SIGAP Logo" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain brightness-110"
               referrerPolicy="no-referrer"
             />
           </motion.div>
-          <h1 className="text-4xl font-black tracking-tighter text-dark-accent leading-none mb-1">SIGAP</h1>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-primary font-black leading-none mb-2">Digital Concierge Desa</p>
+          <h1 className="text-5xl font-black tracking-tighter leading-none mb-1 bg-gradient-to-b from-[#F9D423] via-[#D4AF37] to-[#B8860B] bg-clip-text text-transparent drop-shadow-sm">
+            SIGAP
+          </h1>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]/80 font-black leading-none mb-3">
+            Digital Concierge Desa
+          </p>
           {villageName && (
-            <div className="inline-block px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
-              <span className="text-[9px] font-black text-primary uppercase tracking-widest">{villageName}</span>
+            <div className="inline-block px-4 py-1.5 bg-[#D4AF37]/10 rounded-full border border-[#D4AF37]/20 backdrop-blur-sm">
+              <span className="text-[9px] font-black text-[#D4AF37] uppercase tracking-widest">{villageName}</span>
             </div>
           )}
         </div>
@@ -424,24 +428,24 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-surface-container-lowest rounded-2xl p-8 shadow-[0_20px_50px_rgba(28,28,23,0.05)] border border-outline-variant/10"
+          className="bg-[#161920]/80 backdrop-blur-xl rounded-3xl p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] border border-white/5"
         >
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-on-surface mb-1">Welcome back</h2>
-            <p className="text-on-surface-variant text-base leading-relaxed">Please enter your credentials to continue.</p>
+            <h2 className="text-2xl font-bold text-white mb-1">Welcome back</h2>
+            <p className="text-gray-400 text-sm leading-relaxed">Please enter your credentials to continue.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-secondary ml-1">Email Address</label>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-1">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 w-5 h-5" />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant/20 rounded-2xl text-on-surface placeholder:text-outline/40 focus:ring-2 focus:ring-primary/20 transition-all text-base"
+                  className="w-full pl-12 pr-4 py-4 bg-[#0A0B0E] border border-white/5 rounded-2xl text-white placeholder:text-gray-700 focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]/30 transition-all text-base outline-none"
                   required
                 />
               </div>
@@ -449,20 +453,20 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
 
             <div className="space-y-2">
               <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary">Password</label>
-                <button type="button" className="text-[10px] font-bold uppercase tracking-widest text-primary">Lupa Password?</button>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Password</label>
+                <button type="button" className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Lupa Password?</button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 w-5 h-5" />
                 <input 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-4 bg-surface border border-outline-variant/20 rounded-2xl text-on-surface placeholder:text-outline/40 focus:ring-2 focus:ring-primary/20 transition-all text-base"
+                  className="w-full pl-12 pr-12 py-4 bg-[#0A0B0E] border border-white/5 rounded-2xl text-white placeholder:text-gray-700 focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]/30 transition-all text-base outline-none"
                   required
                 />
-                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-outline">
+                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600">
                   <Eye className="w-5 h-5" />
                 </button>
               </div>
@@ -471,7 +475,7 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full h-14 bg-gradient-to-r from-primary to-primary-container text-white font-bold rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+              className="w-full h-14 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-black font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-gold/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                 <>
@@ -482,18 +486,18 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-outline-variant/10 text-center">
-            <p className="text-on-surface-variant text-xs">Don't have an account? <span className="text-primary font-bold">Contact Admin</span></p>
+          <div className="mt-8 pt-8 border-t border-white/5 text-center">
+            <p className="text-gray-500 text-xs">Don't have an account? <span className="text-[#D4AF37] font-bold cursor-pointer">Contact Admin</span></p>
           </div>
         </motion.div>
 
         <footer className="text-center space-y-4">
           <div className="flex items-center justify-center gap-4">
-            <div className="h-px w-8 bg-outline-variant/30" />
-            <p className="text-[10px] uppercase tracking-widest text-outline font-bold">v1.1.0 - Multi Desa</p>
-            <div className="h-px w-8 bg-outline-variant/30" />
+            <div className="h-px w-8 bg-white/5" />
+            <p className="text-[9px] uppercase tracking-[0.2em] text-gray-600 font-bold">SIGAP v1.1.0 </p>
+            <div className="h-px w-8 bg-white/5" />
           </div>
-          <p className="text-[10px] text-on-surface-variant/60 font-medium">© 2024 Arunika Kreatif media. All Rights Reserved.</p>
+          <p className="text-[9px] text-gray-700 font-medium">© 2026 Arunika Kreatif media. All Rights Reserved.</p>
         </footer>
       </div>
     </motion.main>
