@@ -1,6 +1,45 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYgVGPGM2su_Bp6wtt2jIKuXRrdB3JmXXijmxg-lk25g9yIdP12pyprW2scMhjVCTt/exec';
+const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRHy2S1U89g4X_de2qSzlWrYHptrnmuqaR4JAuVkQtqN1sv-CHAzo2Fydz9nHGbqihVQ/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
+
+// Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
+async function getScriptUrl(): Promise<string> {
+  const urlParams = new URLSearchParams(window.location.search);
+  const villageCode = urlParams.get('v')?.toLowerCase();
+  
+  const savedCode = localStorage.getItem('sigap_village_code');
+  const savedUrl = localStorage.getItem('sigap_script_url');
+
+  // Jika ada kode desa baru di URL atau belum ada URL tersimpan, ambil dari Master
+  if ((villageCode && villageCode !== savedCode) || !savedUrl) {
+    const codeToFetch = villageCode || savedCode;
+    
+    if (codeToFetch) {
+      try {
+        const response = await fetch(`${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}`);
+        const text = await response.text();
+        const data = JSON.parse(text);
+        
+        if (data.success && data.config?.script_url) {
+          localStorage.setItem('sigap_village_code', codeToFetch);
+          localStorage.setItem('sigap_script_url', data.config.script_url);
+          localStorage.setItem('sigap_village_name', data.config.name || '');
+          return data.config.script_url;
+        } else if (data.error) {
+          console.error("Master API Error:", data.error);
+          // Jika error (misal dinonaktifkan), kita tetap return savedUrl atau default 
+          // tapi idealnya aplikasi menangani status non-aktif ini
+        }
+      } catch (e) {
+        console.error("Failed to fetch village config from Master:", e);
+      }
+    }
+  }
+
+  return savedUrl || DEFAULT_SCRIPT_URL;
+}
 
 async function apiFetch(params: Record<string, any>) {
+  const SCRIPT_URL = await getScriptUrl();
   const cleanParams: Record<string, string> = {};
   Object.entries(params).forEach(([key, value]) => {
     cleanParams[key] = String(value);
