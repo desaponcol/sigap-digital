@@ -180,8 +180,7 @@ export default function App() {
     // Inisialisasi konfigurasi desa di awal
     const init = async () => {
       await initVillageConfig();
-      // Trigger re-render untuk menampilkan nama desa di layar login
-      setNotification(null); 
+      setVillageName(localStorage.getItem('sigap_village_name'));
     };
     init();
 
@@ -205,6 +204,7 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [villageName, setVillageName] = useState<string | null>(localStorage.getItem('sigap_village_name'));
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
@@ -282,7 +282,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {currentScreen === 'login' ? (
           <motion.div key="login" className="w-full">
-            <LoginScreen onLogin={handleLogin} isLoading={isLoading} />
+            <LoginScreen onLogin={handleLogin} isLoading={isLoading} villageName={villageName} />
           </motion.div>
         ) : (
           <motion.div key="main" className="w-full">
@@ -373,10 +373,9 @@ export default function App() {
 
 // --- Screens ---
 
-function LoginScreen({ onLogin, isLoading }: { onLogin: (email: string, pass: string) => void, isLoading?: boolean }) {
+function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: string, pass: string) => void, isLoading?: boolean, villageName: string | null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const villageName = localStorage.getItem('sigap_village_name');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
