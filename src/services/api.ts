@@ -6,12 +6,12 @@ async function getScriptUrl(): Promise<string> {
   const urlParams = new URLSearchParams(window.location.search);
   const villageCode = urlParams.get('v')?.toLowerCase();
   
-  const savedCode = localStorage.getItem('sigap_village_code');
-  const savedUrl = localStorage.getItem('sigap_script_url');
+  let currentCode = localStorage.getItem('sigap_village_code');
+  let currentUrl = localStorage.getItem('sigap_script_url');
 
   // Jika ada kode desa baru di URL atau belum ada URL tersimpan, ambil dari Master
-  if ((villageCode && villageCode !== savedCode) || !savedUrl) {
-    const codeToFetch = villageCode || savedCode;
+  if ((villageCode && villageCode !== currentCode) || !currentUrl) {
+    const codeToFetch = villageCode || currentCode;
     
     if (codeToFetch) {
       try {
@@ -23,11 +23,9 @@ async function getScriptUrl(): Promise<string> {
           localStorage.setItem('sigap_village_code', codeToFetch);
           localStorage.setItem('sigap_script_url', data.config.script_url);
           localStorage.setItem('sigap_village_name', data.config.name || '');
-          return data.config.script_url;
+          return data.config.script_url; // Langsung kembalikan URL baru
         } else if (data.error) {
           console.error("Master API Error:", data.error);
-          // Jika error (misal dinonaktifkan), kita tetap return savedUrl atau default 
-          // tapi idealnya aplikasi menangani status non-aktif ini
         }
       } catch (e) {
         console.error("Failed to fetch village config from Master:", e);
@@ -35,7 +33,7 @@ async function getScriptUrl(): Promise<string> {
     }
   }
 
-  return savedUrl || DEFAULT_SCRIPT_URL;
+  return currentUrl || DEFAULT_SCRIPT_URL;
 }
 
 async function apiFetch(params: Record<string, any>) {
@@ -76,17 +74,6 @@ export async function loginUser(email: string, pass: string) {
     const data = await apiFetch({ action: 'login', email, pass });
     return data || { success: false };
   } catch (error) {
-    // Fallback for demo purposes if API is not ready
-    if (email === 'maswardi75@gmail.com') {
-      return {
-        success: true,
-        user: {
-          name: "Ahmad Dani",
-          role: "Admin Digital Concierge",
-          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
-        }
-      };
-    }
     return { success: false };
   }
 }

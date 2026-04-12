@@ -368,6 +368,7 @@ export default function App() {
 function LoginScreen({ onLogin, isLoading }: { onLogin: (email: string, pass: string) => void, isLoading?: boolean }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const villageName = localStorage.getItem('sigap_village_name');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,6 +401,11 @@ function LoginScreen({ onLogin, isLoading }: { onLogin: (email: string, pass: st
           </motion.div>
           <h1 className="text-5xl font-black tracking-tighter text-dark-accent">SIGAP</h1>
           <p className="text-[11px] uppercase tracking-[0.4em] text-primary font-black">Digital Concierge Desa</p>
+          {villageName && (
+            <div className="mt-2 inline-block px-3 py-1 bg-primary/5 rounded-full border border-primary/10">
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest">{villageName}</span>
+            </div>
+          )}
         </div>
 
         <motion.div 
