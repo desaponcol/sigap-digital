@@ -9,24 +9,34 @@ export async function initVillageConfig(): Promise<string> {
   let currentCode = localStorage.getItem('sigap_village_code');
   let currentUrl = localStorage.getItem('sigap_script_url');
 
+  console.log("Village Discovery:", { urlCode: villageCode, savedCode: currentCode });
+
   // Jika ada kode desa baru di URL atau belum ada URL tersimpan, ambil dari Master
   if ((villageCode && villageCode !== currentCode) || !currentUrl) {
     const codeToFetch = villageCode || currentCode;
     
     if (codeToFetch) {
+      console.log("Fetching config for:", codeToFetch);
       try {
-        const response = await fetch(`${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}`);
+        const fetchUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}`;
+        const response = await fetch(fetchUrl);
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const text = await response.text();
         const data = JSON.parse(text);
         
         if (data.success && data.config?.script_url) {
+          console.log("Config found:", data.config.name);
           localStorage.setItem('sigap_village_code', codeToFetch);
           localStorage.setItem('sigap_script_url', data.config.script_url);
           localStorage.setItem('sigap_village_name', data.config.name || '');
           return data.config.script_url;
+        } else {
+          console.warn("Village not found or inactive in Master:", data.error || "Unknown error");
         }
       } catch (e) {
-        console.error("Failed to fetch village config from Master:", e);
+        console.error("Master API Connection Failed:", e);
       }
     }
   }

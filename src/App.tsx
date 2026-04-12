@@ -179,8 +179,11 @@ export default function App() {
   useEffect(() => {
     // Inisialisasi konfigurasi desa di awal
     const init = async () => {
+      console.log("Initializing village config...");
       await initVillageConfig();
-      setVillageName(localStorage.getItem('sigap_village_name'));
+      const name = localStorage.getItem('sigap_village_name');
+      console.log("Village name loaded:", name);
+      setVillageName(name);
     };
     init();
 
@@ -485,7 +488,7 @@ function LoginScreen({ onLogin, isLoading, villageName }: { onLogin: (email: str
         <footer className="text-center space-y-4">
           <div className="flex items-center justify-center gap-4">
             <div className="h-px w-8 bg-outline-variant/30" />
-            <p className="text-[10px] uppercase tracking-widest text-outline font-bold">v1.0.0 Prestige Edition</p>
+            <p className="text-[10px] uppercase tracking-widest text-outline font-bold">v1.1.0 - Multi Desa</p>
             <div className="h-px w-8 bg-outline-variant/30" />
           </div>
           <p className="text-[10px] text-on-surface-variant/60 font-medium">© 2024 Arunika Kreatif media. All Rights Reserved.</p>
