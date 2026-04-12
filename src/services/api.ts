@@ -2,7 +2,7 @@ const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRHy2S1U89g4
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
-async function getScriptUrl(): Promise<string> {
+export async function initVillageConfig(): Promise<string> {
   const urlParams = new URLSearchParams(window.location.search);
   const villageCode = urlParams.get('v')?.toLowerCase();
   
@@ -23,9 +23,7 @@ async function getScriptUrl(): Promise<string> {
           localStorage.setItem('sigap_village_code', codeToFetch);
           localStorage.setItem('sigap_script_url', data.config.script_url);
           localStorage.setItem('sigap_village_name', data.config.name || '');
-          return data.config.script_url; // Langsung kembalikan URL baru
-        } else if (data.error) {
-          console.error("Master API Error:", data.error);
+          return data.config.script_url;
         }
       } catch (e) {
         console.error("Failed to fetch village config from Master:", e);
@@ -37,7 +35,7 @@ async function getScriptUrl(): Promise<string> {
 }
 
 async function apiFetch(params: Record<string, any>) {
-  const SCRIPT_URL = await getScriptUrl();
+  const SCRIPT_URL = await initVillageConfig();
   const cleanParams: Record<string, string> = {};
   Object.entries(params).forEach(([key, value]) => {
     cleanParams[key] = String(value);

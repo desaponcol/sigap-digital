@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { type Screen, type User, type AttendanceRecord, type ReportRecord, type AppSettings } from './types';
-import { fetchAttendanceRecords, fetchReportRecords, saveAttendance, saveReport, loginUser, fetchSettings, saveSettings, fetchUsers } from './services/api';
+import { fetchAttendanceRecords, fetchReportRecords, saveAttendance, saveReport, loginUser, fetchSettings, saveSettings, fetchUsers, initVillageConfig } from './services/api';
 
 // Helper for distance calculation (Haversine formula)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -177,6 +177,14 @@ export default function App() {
 
   // Check for persistent login on mount
   useEffect(() => {
+    // Inisialisasi konfigurasi desa di awal
+    const init = async () => {
+      await initVillageConfig();
+      // Trigger re-render untuk menampilkan nama desa di layar login
+      setNotification(null); 
+    };
+    init();
+
     const savedUser = localStorage.getItem('sigap_user');
     if (savedUser) {
       try {
