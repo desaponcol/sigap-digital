@@ -177,6 +177,41 @@ const getLocalDateString = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const normalizeDate = (val: any): string => {
+  if (!val || val === '-') return '';
+  
+  // Handle Excel/Google Sheets Serial Numbers
+  if (typeof val === 'number' || (!isNaN(Number(val)) && !String(val).includes('-') && !String(val).includes('/') && !String(val).includes(':'))) {
+    const num = Number(val);
+    if (num > 30000 && num < 60000) {
+      const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+      return getLocalDateString(d);
+    }
+  }
+
+  const str = String(val).trim();
+  
+  // Match YYYY-MM-DD or YYYY/MM/DD
+  const ymd = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+  if (ymd) {
+    return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
+  }
+
+  // Match DD/MM/YYYY or DD-MM-YYYY
+  const dmy = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmy) {
+    return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
+  }
+
+  // Fallback to standard JS parsing
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return getLocalDateString(d);
+  }
+
+  return '';
+};
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -904,13 +939,11 @@ function PresensiScreen({ onSave, onError, userEmail, records, refreshRecords }:
       // CEK APAKAH SUDAH PRESENSI HARI INI (Filter berdasarkan email dan tanggal lokal)
       const today = getLocalDateString();
       const alreadySubmitted = currentRecords.some((r: any) => {
-        const rEmail = (r.email || r.Email || '').toLowerCase();
-        if (rEmail !== userEmail.toLowerCase()) return false;
+        const rEmail = String(r.email || r.Email || '').trim().toLowerCase();
+        if (rEmail !== userEmail.trim().toLowerCase()) return false;
 
-        const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
-        const timestamp = parseDate(dateStr);
-        if (!timestamp) return false;
-        return getLocalDateString(new Date(timestamp)) === today;
+        const dateVal = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
+        return normalizeDate(dateVal) === today;
       });
 
       if (alreadySubmitted) {
@@ -1118,15 +1151,11 @@ function LaporanScreen({ onSave, onError, userEmail, reportRecords, refreshRecor
 
       // CEK APAKAH SUDAH ADA LAPORAN UNTUK TANGGAL INI (Filter berdasarkan email dan tanggal)
       const alreadySubmitted = currentReports.some((r: any) => {
-        const rEmail = (r.email || r.Email || '').toLowerCase();
-        if (rEmail !== userEmail.toLowerCase()) return false;
+        const rEmail = String(r.email || r.Email || '').trim().toLowerCase();
+        if (rEmail !== userEmail.trim().toLowerCase()) return false;
 
-        const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
-        if (!dateStr) return false;
-        
-        const ts = parseDate(dateStr);
-        if (!ts) return false;
-        return getLocalDateString(new Date(ts)) === formData.date;
+        const dateVal = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
+        return normalizeDate(dateVal) === formData.date;
       });
 
       if (alreadySubmitted) {
