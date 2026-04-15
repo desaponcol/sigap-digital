@@ -241,23 +241,33 @@ export default function App() {
     }
   };
 
-  const loadRecords = async () => {
+  const loadRecords = async (forceUserEmail?: string) => {
     setIsLoading(true);
     try {
-      const emailToFetch = user.role.toLowerCase().includes('admin') 
+      // Untuk validasi pencegahan ganda, kita butuh data user yang sedang login
+      // Jika forceUserEmail ada, berarti kita sedang memvalidasi data user tersebut
+      const emailToFetch = forceUserEmail || (user.role.toLowerCase().includes('admin') 
         ? (selectedUserEmail || '') 
-        : user.email;
+        : user.email);
 
       const [attData, repData] = await Promise.all([
         fetchAttendanceRecords(emailToFetch),
         fetchReportRecords(emailToFetch)
       ]);
-      setRecords(attData || []);
-      setReportRecords(repData || []);
+      
+      // Jika ini adalah fetch untuk admin melihat rekap, simpan ke state utama
+      if (!forceUserEmail) {
+        setRecords(attData || []);
+        setReportRecords(repData || []);
+      }
+      
+      return { attData: attData || [], repData: repData || [] };
     } catch (error) {
       console.error('Error loading data:', error);
+      return { attData: [], repData: [] };
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const navigate = (screen: Screen) => {
@@ -317,6 +327,7 @@ export default function App() {
                       navigate('dashboard');
                     }} 
                     onError={(msg) => showNotification(msg, 'error')}
+                    refreshRecords={() => loadRecords(user.email)}
                   />
                 )}
                 {currentScreen === 'laporan' && (
@@ -329,6 +340,7 @@ export default function App() {
                       navigate('dashboard');
                     }} 
                     onError={(msg) => showNotification(msg, 'error')}
+                    refreshRecords={() => loadRecords(user.email)}
                   />
                 )}
                 {currentScreen === 'rekap' && (
@@ -839,7 +851,7 @@ function StatBox({ icon, value, label, color }: { icon: React.ReactNode, value: 
   );
 }
 
-function PresensiScreen({ onSave, onError, userEmail, records }: { onSave: () => void, onError: (msg: string) => void, userEmail: string, records: AttendanceRecord[] }) {
+function PresensiScreen({ onSave, onError, userEmail, records, refreshRecords }: { onSave: () => void, onError: (msg: string) => void, userEmail: string, records: AttendanceRecord[], refreshRecords: () => Promise<any> }) {
   const [selected, setSelected] = useState<'HADIR' | 'IZIN' | 'SAKIT'>('HADIR');
   const [location, setLocation] = useState('Mencari lokasi...');
   const [distance, setDistance] = useState<number | null>(null);
@@ -873,6 +885,8 @@ function PresensiScreen({ onSave, onError, userEmail, records }: { onSave: () =>
       const s = await fetchSettings();
       setSettings(s);
       refreshLocation(s);
+      // Refresh data terbaru saat masuk layar presensi
+      await refreshRecords();
     };
     init();
   }, []);
@@ -880,48 +894,61 @@ function PresensiScreen({ onSave, onError, userEmail, records }: { onSave: () =>
   const isInRadius = settings && distance !== null && distance <= Number(settings.allowed_radius);
 
   const handleSubmit = async () => {
-    // CEK APAKAH SUDAH PRESENSI HARI INI (Filter berdasarkan email dan tanggal lokal)
-    const today = getLocalDateString();
-    const alreadySubmitted = records.some(r => {
-      const rEmail = (r.email || r.Email || '').toLowerCase();
-      if (rEmail !== userEmail.toLowerCase()) return false;
-
-      const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
-      const timestamp = parseDate(dateStr);
-      if (!timestamp) return false;
-      return getLocalDateString(new Date(timestamp)) === today;
-    });
-
-    if (alreadySubmitted) {
-      onError('Anda sudah melakukan presensi hari ini!');
-      return;
-    }
-
-    if (selected === 'HADIR') {
-      if (distance === null) {
-        onError('Mohon tunggu, sedang mencari lokasi GPS...');
-        return;
-      }
-      if (!isInRadius) {
-        onError(`Anda berada di luar radius kantor! (Jarak: ${Math.round(distance)}m, Maks: ${settings?.allowed_radius}m)`);
-        return;
-      }
-    }
-
     setIsSubmitting(true);
-    const success = await saveAttendance({
-      status: selected,
-      location,
-      timestamp: new Date().toISOString(),
-      email: userEmail
-    });
     
-    if (success) {
-      onSave();
-    } else {
-      onError('Gagal mengirim presensi.');
+    try {
+      // AMBIL DATA TERBARU DARI SERVER SEBELUM SUBMIT (PENTING!)
+      const latestData = await refreshRecords();
+      const currentRecords = latestData.attData || [];
+
+      // CEK APAKAH SUDAH PRESENSI HARI INI (Filter berdasarkan email dan tanggal lokal)
+      const today = getLocalDateString();
+      const alreadySubmitted = currentRecords.some((r: any) => {
+        const rEmail = (r.email || r.Email || '').toLowerCase();
+        if (rEmail !== userEmail.toLowerCase()) return false;
+
+        const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
+        const timestamp = parseDate(dateStr);
+        if (!timestamp) return false;
+        return getLocalDateString(new Date(timestamp)) === today;
+      });
+
+      if (alreadySubmitted) {
+        onError('ANDA SUDAH MELAKUKAN PRESENSI HARI INI!');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (selected === 'HADIR') {
+        if (distance === null) {
+          onError('Mohon tunggu, sedang mencari lokasi GPS...');
+          setIsSubmitting(false);
+          return;
+        }
+        if (!isInRadius) {
+          onError(`Anda berada di luar radius kantor! (Jarak: ${Math.round(distance)}m, Maks: ${settings?.allowed_radius}m)`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const success = await saveAttendance({
+        status: selected,
+        location,
+        timestamp: new Date().toISOString(),
+        email: userEmail
+      });
+      
+      if (success) {
+        onSave();
+      } else {
+        onError('Gagal mengirim presensi.');
+      }
+    } catch (e) {
+      onError('Terjadi kesalahan saat memproses data.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
@@ -1062,13 +1089,18 @@ function StatusOption({ active, onClick, label, icon, color }: { active: boolean
   );
 }
 
-function LaporanScreen({ onSave, onError, userEmail, reportRecords }: { onSave: () => void, onError: (msg: string) => void, userEmail: string, reportRecords: ReportRecord[] }) {
+function LaporanScreen({ onSave, onError, userEmail, reportRecords, refreshRecords }: { onSave: () => void, onError: (msg: string) => void, userEmail: string, reportRecords: ReportRecord[], refreshRecords: () => Promise<any> }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
     detail: '',
     output: ''
   });
+
+  useEffect(() => {
+    // Refresh data terbaru saat masuk layar laporan
+    refreshRecords();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1077,32 +1109,43 @@ function LaporanScreen({ onSave, onError, userEmail, reportRecords }: { onSave: 
       return;
     }
 
-    // CEK APAKAH SUDAH ADA LAPORAN UNTUK TANGGAL INI (Filter berdasarkan email dan tanggal)
-    const alreadySubmitted = reportRecords.some(r => {
-      const rEmail = (r.email || r.Email || '').toLowerCase();
-      if (rEmail !== userEmail.toLowerCase()) return false;
-
-      const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
-      if (!dateStr) return false;
-      
-      const ts = parseDate(dateStr);
-      if (!ts) return false;
-      return getLocalDateString(new Date(ts)) === formData.date;
-    });
-
-    if (alreadySubmitted) {
-      onError(`Anda sudah membuat laporan untuk tanggal ${formatDateIndo(formData.date)}!`);
-      return;
-    }
-
     setIsSubmitting(true);
-    const success = await saveReport({ ...formData, email: userEmail });
-    if (success) {
-      onSave();
-    } else {
-      onError('Gagal menyimpan laporan.');
+
+    try {
+      // AMBIL DATA TERBARU DARI SERVER SEBELUM SUBMIT
+      const latestData = await refreshRecords();
+      const currentReports = latestData.repData || [];
+
+      // CEK APAKAH SUDAH ADA LAPORAN UNTUK TANGGAL INI (Filter berdasarkan email dan tanggal)
+      const alreadySubmitted = currentReports.some((r: any) => {
+        const rEmail = (r.email || r.Email || '').toLowerCase();
+        if (rEmail !== userEmail.toLowerCase()) return false;
+
+        const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
+        if (!dateStr) return false;
+        
+        const ts = parseDate(dateStr);
+        if (!ts) return false;
+        return getLocalDateString(new Date(ts)) === formData.date;
+      });
+
+      if (alreadySubmitted) {
+        onError(`ANDA SUDAH MEMBUAT LAPORAN UNTUK TANGGAL ${formatDateIndo(formData.date)}!`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const success = await saveReport({ ...formData, email: userEmail });
+      if (success) {
+        onSave();
+      } else {
+        onError('Gagal menyimpan laporan.');
+      }
+    } catch (e) {
+      onError('Terjadi kesalahan saat memproses laporan.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
