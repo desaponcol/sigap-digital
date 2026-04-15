@@ -181,7 +181,7 @@ const normalizeDate = (val: any): string => {
   if (!val || val === '-') return '';
   
   // Handle Excel/Google Sheets Serial Numbers
-  if (typeof val === 'number' || (!isNaN(Number(val)) && !String(val).includes('-') && !String(val).includes('/') && !String(val).includes(':'))) {
+  if (typeof val === 'number' || (!isNaN(Number(val)) && !String(val).includes('-') && !String(val).includes('/') && !String(val).includes(':') && !String(val).includes(' '))) {
     const num = Number(val);
     if (num > 30000 && num < 60000) {
       const d = new Date(Math.round((num - 25569) * 86400 * 1000));
@@ -191,16 +191,17 @@ const normalizeDate = (val: any): string => {
 
   const str = String(val).trim();
   
-  // Match YYYY-MM-DD or YYYY/MM/DD
-  const ymd = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
-  if (ymd) {
-    return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
-  }
-
-  // Match DD/MM/YYYY or DD-MM-YYYY
-  const dmy = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  // Match DD/MM/YYYY or DD-MM-YYYY or DD MM YYYY (Indonesian Format)
+  // Also handles if there is time after the date (e.g. 15/04/2026 08:00:00)
+  const dmy = str.match(/^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{4})/);
   if (dmy) {
     return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
+  }
+
+  // Match YYYY-MM-DD or YYYY/MM/DD or YYYY MM DD
+  const ymd = str.match(/^(\d{4})[/\- ](\d{1,2})[/\- ](\d{1,2})/);
+  if (ymd) {
+    return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
   }
 
   // Fallback to standard JS parsing
