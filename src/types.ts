@@ -10,6 +10,7 @@ export interface User {
 export interface AttendanceRecord {
   id: string;
   email: string;
+  Email?: string;
   date: string;
   status: 'HADIR' | 'IZIN' | 'SAKIT';
   time?: string;
@@ -28,6 +29,7 @@ export interface AttendanceRecord {
 export interface ReportRecord {
   id: string;
   email: string;
+  Email?: string;
   date: string;
   detail: string;
   output: string;

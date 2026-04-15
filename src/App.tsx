@@ -170,6 +170,13 @@ const parseDate = (dateVal: any): number => {
   }
 };
 
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -873,13 +880,16 @@ function PresensiScreen({ onSave, onError, userEmail, records }: { onSave: () =>
   const isInRadius = settings && distance !== null && distance <= Number(settings.allowed_radius);
 
   const handleSubmit = async () => {
-    // CEK APAKAH SUDAH PRESENSI HARI INI
-    const today = new Date().toISOString().split('T')[0];
+    // CEK APAKAH SUDAH PRESENSI HARI INI (Filter berdasarkan email dan tanggal lokal)
+    const today = getLocalDateString();
     const alreadySubmitted = records.some(r => {
-      const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+      const rEmail = (r.email || r.Email || '').toLowerCase();
+      if (rEmail !== userEmail.toLowerCase()) return false;
+
+      const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
       const timestamp = parseDate(dateStr);
       if (!timestamp) return false;
-      return new Date(timestamp).toISOString().split('T')[0] === today;
+      return getLocalDateString(new Date(timestamp)) === today;
     });
 
     if (alreadySubmitted) {
@@ -1067,18 +1077,21 @@ function LaporanScreen({ onSave, onError, userEmail, reportRecords }: { onSave: 
       return;
     }
 
-    // CEK APAKAH SUDAH ADA LAPORAN UNTUK TANGGAL INI
+    // CEK APAKAH SUDAH ADA LAPORAN UNTUK TANGGAL INI (Filter berdasarkan email dan tanggal)
     const alreadySubmitted = reportRecords.some(r => {
-      const dateStr = r.Date || r.date || r.tanggal || '';
+      const rEmail = (r.email || r.Email || '').toLowerCase();
+      if (rEmail !== userEmail.toLowerCase()) return false;
+
+      const dateStr = r.date || r.Date || r.tanggal || r.timestamp || r.Timestamp || '';
       if (!dateStr) return false;
       
-      // Normalize dates for comparison
-      const recordDate = new Date(parseDate(dateStr)).toISOString().split('T')[0];
-      return recordDate === formData.date;
+      const ts = parseDate(dateStr);
+      if (!ts) return false;
+      return getLocalDateString(new Date(ts)) === formData.date;
     });
 
     if (alreadySubmitted) {
-      onError(`Anda sudah membuat laporan untuk tanggal ${formData.date}!`);
+      onError(`Anda sudah membuat laporan untuk tanggal ${formatDateIndo(formData.date)}!`);
       return;
     }
 
