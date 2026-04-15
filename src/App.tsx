@@ -303,6 +303,7 @@ export default function App() {
                 {currentScreen === 'presensi' && (
                   <PresensiScreen 
                     userEmail={user.email}
+                    records={records}
                     onSave={() => {
                       loadRecords();
                       showNotification('Presensi berhasil dikirim!');
@@ -314,6 +315,7 @@ export default function App() {
                 {currentScreen === 'laporan' && (
                   <LaporanScreen 
                     userEmail={user.email}
+                    reportRecords={reportRecords}
                     onSave={() => {
                       loadRecords();
                       showNotification('Laporan berhasil disimpan!');
@@ -830,7 +832,7 @@ function StatBox({ icon, value, label, color }: { icon: React.ReactNode, value: 
   );
 }
 
-function PresensiScreen({ onSave, onError, userEmail }: { onSave: () => void, onError: (msg: string) => void, userEmail: string }) {
+function PresensiScreen({ onSave, onError, userEmail, records }: { onSave: () => void, onError: (msg: string) => void, userEmail: string, records: AttendanceRecord[] }) {
   const [selected, setSelected] = useState<'HADIR' | 'IZIN' | 'SAKIT'>('HADIR');
   const [location, setLocation] = useState('Mencari lokasi...');
   const [distance, setDistance] = useState<number | null>(null);
@@ -871,6 +873,20 @@ function PresensiScreen({ onSave, onError, userEmail }: { onSave: () => void, on
   const isInRadius = settings && distance !== null && distance <= Number(settings.allowed_radius);
 
   const handleSubmit = async () => {
+    // CEK APAKAH SUDAH PRESENSI HARI INI
+    const today = new Date().toISOString().split('T')[0];
+    const alreadySubmitted = records.some(r => {
+      const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+      const timestamp = parseDate(dateStr);
+      if (!timestamp) return false;
+      return new Date(timestamp).toISOString().split('T')[0] === today;
+    });
+
+    if (alreadySubmitted) {
+      onError('Anda sudah melakukan presensi hari ini!');
+      return;
+    }
+
     if (selected === 'HADIR') {
       if (distance === null) {
         onError('Mohon tunggu, sedang mencari lokasi GPS...');
@@ -1036,7 +1052,7 @@ function StatusOption({ active, onClick, label, icon, color }: { active: boolean
   );
 }
 
-function LaporanScreen({ onSave, onError, userEmail }: { onSave: () => void, onError: (msg: string) => void, userEmail: string }) {
+function LaporanScreen({ onSave, onError, userEmail, reportRecords }: { onSave: () => void, onError: (msg: string) => void, userEmail: string, reportRecords: ReportRecord[] }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -1050,6 +1066,22 @@ function LaporanScreen({ onSave, onError, userEmail }: { onSave: () => void, onE
       onError('Harap isi semua bidang laporan.');
       return;
     }
+
+    // CEK APAKAH SUDAH ADA LAPORAN UNTUK TANGGAL INI
+    const alreadySubmitted = reportRecords.some(r => {
+      const dateStr = r.Date || r.date || r.tanggal || '';
+      if (!dateStr) return false;
+      
+      // Normalize dates for comparison
+      const recordDate = new Date(parseDate(dateStr)).toISOString().split('T')[0];
+      return recordDate === formData.date;
+    });
+
+    if (alreadySubmitted) {
+      onError(`Anda sudah membuat laporan untuk tanggal ${formData.date}!`);
+      return;
+    }
+
     setIsSubmitting(true);
     const success = await saveReport({ ...formData, email: userEmail });
     if (success) {

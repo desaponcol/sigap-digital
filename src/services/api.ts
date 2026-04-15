@@ -1,4 +1,4 @@
-const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvfqNulXBgBY8VjzptBnrOSZvnLab99GerwE1ZfZhSeBG2yahkNWPIACOfnSnOF2jKhA/exec';
+const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6Q6IYtA4P1rbi355a0yjPpjOSiePOUeElrxdAGnnhCUf5U9yp91cefnSoUf33tDYq/exec';
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
