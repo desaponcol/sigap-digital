@@ -147,25 +147,56 @@ const parseDate = (dateVal: any): number => {
     let date: Date | null = null;
     if (dateVal instanceof Date) {
       date = dateVal;
-    } else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/') && !String(dateVal).includes(':') && !String(dateVal).includes(' '))) {
+    } else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/'))) {
       const num = Number(dateVal);
       if (num > 30000 && num < 60000) {
         date = new Date(Math.round((num - 25569) * 86400 * 1000));
       }
     }
+    
     if (!date && typeof dateVal === 'string') {
       const str = dateVal.trim();
+      
+      // Handle YYYY-MM-DD
       const ymd = str.match(/^(\d{4})[/\- ](\d{1,2})[/\- ](\d{1,2})/);
       if (ymd) {
-        date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+        // Capture optional time
+        const timeMatch = str.match(/ (\d{1,2}):(\d{1,2}):?(\d{1,2})?/);
+        date = new Date(
+          Number(ymd[1]), 
+          Number(ymd[2]) - 1, 
+          Number(ymd[3]),
+          timeMatch ? Number(timeMatch[1]) : 0,
+          timeMatch ? Number(timeMatch[2]) : 0,
+          timeMatch ? Number(timeMatch[3] || 0) : 0
+        );
       } else {
+        // Handle DD/MM/YYYY or MM/DD/YYYY
         const dmy = str.match(/^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{4})/);
         if (dmy) {
-          date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+          let day = Number(dmy[1]);
+          let month = Number(dmy[2]);
+          let year = Number(dmy[3]);
+
+          // SMART DETECTION: If month > 12, it must be M/D/Y
+          if (month > 12) {
+            const temp = day;
+            day = month;
+            month = temp;
+          }
+
+          const timeMatch = str.match(/ (\d{1,2}):(\d{1,2}):?(\d{1,2})?/);
+          date = new Date(
+            year, 
+            month - 1, 
+            day,
+            timeMatch ? Number(timeMatch[1]) : 0,
+            timeMatch ? Number(timeMatch[2]) : 0,
+            timeMatch ? Number(timeMatch[3] || 0) : 0
+          );
         } else {
           const d = new Date(str);
           if (!isNaN(d.getTime())) {
-            // ISO string from GAS often needs 7 hour shift to reflect WIB correctly
             if (str.includes('T') && str.endsWith('Z')) {
               date = new Date(d.getTime() + (7 * 60 * 60 * 1000));
             } else {
