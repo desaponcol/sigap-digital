@@ -23,17 +23,20 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
     
     if (codeToFetch) {
       try {
-        // Gunakan fetch paling sederhana untuk menghindari preflight CORS
-        const fetchUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}&_t=${Date.now()}`;
+        // Gunakan proxy lokal untuk menghindari CORS
+        const targetUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}&_t=${Date.now()}`;
+        const fetchUrl = `/api/proxy?url=${encodeURIComponent(MASTER_SCRIPT_URL)}&action=getVillageConfig&code=${codeToFetch}&_t=${Date.now()}`;
         
-        const response = await fetch(fetchUrl, {
-          method: 'GET',
-          redirect: 'follow'
-        });
+        const response = await fetch(fetchUrl);
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const text = await response.text();
+        
+        if (text.includes('指令碼已完成') || text.includes('Script completed')) {
+          return { success: false, error: "Script Master tidak mengembalikan data. Cek parameter." };
+        }
+
         let data;
         try {
           data = JSON.parse(text);
@@ -74,33 +77,45 @@ async function apiFetch(params: Record<string, any>) {
       cleanParams[key] = String(value);
     });
     
+    // Gunakan proxy lokal untuk menghindari CORS
     const urlParams = new URLSearchParams({ ...cleanParams, _t: Date.now().toString() });
-    const url = `${SCRIPT_URL}?${urlParams.toString()}`;
+    const url = `/api/proxy?url=${encodeURIComponent(SCRIPT_URL)}&${urlParams.toString()}`;
     
     // Gunakan AbortController untuk timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 detik timeout
 
     const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
       signal: controller.signal
     });
     
     clearTimeout(timeoutId);
     
+    const text = await response.text();
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      try {
+        const errorData = JSON.parse(text);
+        if (errorData.error === "Google Script Error") {
+          throw new Error(`Google Script Error: ${errorData.details}`);
+        }
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      } catch (e: any) {
+        if (e.message.includes("Google Script Error")) throw e;
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
     }
     
-    const text = await response.text();
     try {
       return JSON.parse(text);
     } catch (e) {
       console.error('Failed to parse JSON response:', text);
-      // Jika bukan JSON, mungkin dialihkan ke halaman login Google
+      // Jika bukan JSON, mungkin dialihkan ke halaman login Google atau error GAS
       if (text.includes('google-signin') || text.includes('Service Login')) {
         throw new Error('Harap login ke akun Google Anda di browser ini.');
+      }
+      if (text.includes('指令碼已完成') || text.includes('Script completed')) {
+        throw new Error('Script Google tidak mengembalikan data. Cek parameter action.');
       }
       return null;
     }
