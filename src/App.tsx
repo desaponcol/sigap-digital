@@ -279,8 +279,11 @@ export default function App() {
     try {
       const usersData = await fetchUsers();
       setAllUsers(usersData || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading users:', error);
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('Koneksi')) {
+        showNotification('Gagal memuat data pegawai. Cek koneksi atau login Google.', 'error');
+      }
     }
   };
 
@@ -305,8 +308,11 @@ export default function App() {
       }
       
       return { attData: attData || [], repData: repData || [] };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('Koneksi')) {
+        showNotification('Gagal mengambil data. Pastikan Anda sudah login Google.', 'error');
+      }
       return { attData: [], repData: [] };
     } finally {
       setIsLoading(false);

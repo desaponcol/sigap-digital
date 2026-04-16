@@ -62,21 +62,32 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
 }
 
 async function apiFetch(params: Record<string, any>) {
-  await initVillageConfig();
-  const SCRIPT_URL = localStorage.getItem('sigap_script_url') || DEFAULT_SCRIPT_URL;
-  const cleanParams: Record<string, string> = {};
-  Object.entries(params).forEach(([key, value]) => {
-    cleanParams[key] = String(value);
-  });
-  
-  const urlParams = new URLSearchParams({ ...cleanParams, _t: Date.now().toString() });
-  const url = `${SCRIPT_URL}?${urlParams.toString()}`;
-  
   try {
+    // Pastikan konfigurasi desa sudah diinisialisasi (hanya sekali jika sudah ada)
+    if (!localStorage.getItem('sigap_script_url')) {
+      await initVillageConfig();
+    }
+    
+    const SCRIPT_URL = localStorage.getItem('sigap_script_url') || DEFAULT_SCRIPT_URL;
+    const cleanParams: Record<string, string> = {};
+    Object.entries(params).forEach(([key, value]) => {
+      cleanParams[key] = String(value);
+    });
+    
+    const urlParams = new URLSearchParams({ ...cleanParams, _t: Date.now().toString() });
+    const url = `${SCRIPT_URL}?${urlParams.toString()}`;
+    
+    // Gunakan AbortController untuk timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 detik timeout
+
     const response = await fetch(url, {
       method: 'GET',
-      redirect: 'follow'
+      redirect: 'follow',
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -87,9 +98,17 @@ async function apiFetch(params: Record<string, any>) {
       return JSON.parse(text);
     } catch (e) {
       console.error('Failed to parse JSON response:', text);
+      // Jika bukan JSON, mungkin dialihkan ke halaman login Google
+      if (text.includes('google-signin') || text.includes('Service Login')) {
+        throw new Error('Harap login ke akun Google Anda di browser ini.');
+      }
       return null;
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error(`API Timeout (${params.action})`);
+      throw new Error('Koneksi lambat atau terputus (Timeout).');
+    }
     console.error(`API Fetch Error (${params.action}):`, error);
     throw error;
   }
