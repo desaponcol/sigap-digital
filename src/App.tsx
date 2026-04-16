@@ -69,36 +69,38 @@ const formatDateIndo = (dateVal: any) => {
   try {
     let date: Date | null = null;
 
-    // 1. Jika sudah berupa objek Date
     if (dateVal instanceof Date) {
       date = dateVal;
     } 
-    // 2. Jika berupa angka (Serial Number Excel/Google Sheets, misal: 46116)
     else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/'))) {
       const num = Number(dateVal);
       if (num > 30000 && num < 60000) {
-        // Konversi serial number ke Date
         date = new Date(Math.round((num - 25569) * 86400 * 1000));
       }
     }
 
-    // 3. Jika berupa string
     if (!date && typeof dateVal === 'string') {
       const str = dateVal.trim();
       
-      // Cek format YYYY-MM-DD (2026-04-04)
-      const ymd = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      const ymd = str.match(/^(\d{4})[/\- ](\d{1,2})[/\- ](\d{1,2})/);
       if (ymd) {
         date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
-      } 
-      // Cek format DD/MM/YYYY (05/04/2026)
-      else {
-        const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      } else {
+        const dmy = str.match(/^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{4})/);
         if (dmy) {
           date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
         } else {
+          // If it's an ISO string from GAS (e.g. 2026-04-15T17:00:00.000Z)
+          // we add 7 hours (WIB) before getting the date to avoid day shift
           const d = new Date(str);
-          if (!isNaN(d.getTime())) date = d;
+          if (!isNaN(d.getTime())) {
+            if (str.includes('T') && str.endsWith('Z')) {
+              // Shift to WIB for display if it's a UTC string
+              date = new Date(d.getTime() + (7 * 60 * 60 * 1000));
+            } else {
+              date = d;
+            }
+          }
         }
       }
     }
@@ -145,7 +147,7 @@ const parseDate = (dateVal: any): number => {
     let date: Date | null = null;
     if (dateVal instanceof Date) {
       date = dateVal;
-    } else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/'))) {
+    } else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/') && !String(dateVal).includes(':') && !String(dateVal).includes(' '))) {
       const num = Number(dateVal);
       if (num > 30000 && num < 60000) {
         date = new Date(Math.round((num - 25569) * 86400 * 1000));
@@ -153,16 +155,23 @@ const parseDate = (dateVal: any): number => {
     }
     if (!date && typeof dateVal === 'string') {
       const str = dateVal.trim();
-      const ymd = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      const ymd = str.match(/^(\d{4})[/\- ](\d{1,2})[/\- ](\d{1,2})/);
       if (ymd) {
         date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
       } else {
-        const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        const dmy = str.match(/^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{4})/);
         if (dmy) {
           date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
         } else {
           const d = new Date(str);
-          if (!isNaN(d.getTime())) date = d;
+          if (!isNaN(d.getTime())) {
+            // ISO string from GAS often needs 7 hour shift to reflect WIB correctly
+            if (str.includes('T') && str.endsWith('Z')) {
+              date = new Date(d.getTime() + (7 * 60 * 60 * 1000));
+            } else {
+              date = d;
+            }
+          }
         }
       }
     }
@@ -209,6 +218,11 @@ const normalizeDate = (val: any): string => {
   // Fallback to standard JS parsing
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
+    if (str.includes('T') && str.endsWith('Z')) {
+      // Shift to WIB if it's a UTC string from GAS
+      const shifted = new Date(d.getTime() + (7 * 60 * 60 * 1000));
+      return getLocalDateString(shifted);
+    }
     return getLocalDateString(d);
   }
 
@@ -1787,7 +1801,8 @@ function RekapScreen({
       const startY = 35;
       doc.text(`Nama: ${targetUser.name}`, 14, startY);
       doc.text(`Jabatan: ${targetUser.role}`, 14, startY + 5);
-      doc.text(`Periode: ${new Date(selectedMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`, 14, startY + 10);
+      const monthDate = new Date(selectedMonth + '-02'); // Use day 02 to avoid UTC shift to previous month
+      doc.text(`Periode: ${monthDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`, 14, startY + 10);
       doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} pukul ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`, 14, startY + 15);
       
       // Sorting records by date (ascending)
