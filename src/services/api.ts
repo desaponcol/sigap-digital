@@ -1,11 +1,19 @@
-const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk9wTLKn97pVE8bHLVntRWpUr3dcp4oydmKStSR6TgRjIozD86hR5uqyR3Pag53RIq/exec';
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk9wTLKn97pVE8bHLVntRWpUr3dcp4oydmKStSR6TgRjIozD86hR5uqyR3Pag53RIq/exec';
+const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbys0cC1_mdc02-fv71jnfw9Pgfm6rSI57ZxNdpTYtUE9hPazn0eC86ofdc8NKaQ4qphww/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbys0cC1_mdc02-fv71jnfw9Pgfm6rSI57ZxNdpTYtUE9hPazn0eC86ofdc8NKaQ4qphww/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
 export async function initVillageConfig(): Promise<{success: boolean, error?: string}> {
   const urlParams = new URLSearchParams(window.location.search);
   const villageCode = urlParams.get('v')?.toLowerCase();
   
+  // RESET CACHE jika MASTER_SCRIPT_URL berubah
+  const lastMaster = localStorage.getItem('sigap_last_master_url');
+  if (lastMaster !== MASTER_SCRIPT_URL) {
+    localStorage.removeItem('sigap_script_url');
+    localStorage.removeItem('sigap_village_code');
+    localStorage.setItem('sigap_last_master_url', MASTER_SCRIPT_URL);
+  }
+
   let currentCode = localStorage.getItem('sigap_village_code');
   let currentUrl = localStorage.getItem('sigap_script_url');
 
@@ -18,7 +26,10 @@ export async function initVillageConfig(): Promise<{success: boolean, error?: st
         // Gunakan fetch paling sederhana untuk menghindari preflight CORS
         const fetchUrl = `${MASTER_SCRIPT_URL}?action=getVillageConfig&code=${codeToFetch}&_t=${Date.now()}`;
         
-        const response = await fetch(fetchUrl);
+        const response = await fetch(fetchUrl, {
+          method: 'GET',
+          redirect: 'follow'
+        });
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
@@ -64,7 +75,7 @@ async function apiFetch(params: Record<string, any>) {
   try {
     const response = await fetch(url, {
       method: 'GET',
-      redirect: 'follow',
+      redirect: 'follow'
     });
     
     if (!response.ok) {
