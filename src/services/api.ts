@@ -1,5 +1,5 @@
 const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk9wTLKn97pVE8bHLVntRWpUr3dcp4oydmKStSR6TgRjIozD86hR5uqyR3Pag53RIq/exec';
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk9wTLKn97pVE8bHLVntRWpUr3dcp4oydmKStSR6TgRjIozD86hR5uqyR3Pag53RIq/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
 export async function initVillageConfig(): Promise<{success: boolean, error?: string}> {
@@ -122,8 +122,8 @@ export async function fetchUsers() {
 
 export async function saveAttendance(data: { status: string; location: string; timestamp: string; email: string }) {
   try {
-    await apiFetch({ action: 'saveAttendance', ...data });
-    return true;
+    const res = await apiFetch({ action: 'saveAttendance', ...data });
+    return res && res.success !== false;
   } catch (error) {
     return false;
   }
@@ -131,8 +131,8 @@ export async function saveAttendance(data: { status: string; location: string; t
 
 export async function saveReport(data: { date: string; detail: string; output: string; email: string }) {
   try {
-    await apiFetch({ action: 'saveReport', ...data });
-    return true;
+    const res = await apiFetch({ action: 'saveReport', ...data });
+    return res && res.success !== false;
   } catch (error) {
     return false;
   }
@@ -166,8 +166,8 @@ export async function fetchSettings() {
 
 export async function saveSettings(data: any) {
   try {
-    await apiFetch({ action: 'saveSettings', ...data });
-    return true;
+    const res = await apiFetch({ action: 'saveSettings', ...data });
+    return res && res.success !== false;
   } catch (error) {
     return false;
   }
@@ -175,8 +175,8 @@ export async function saveSettings(data: any) {
 
 export async function saveUser(data: { name: string; email: string; pass: string; role: string }) {
   try {
-    await apiFetch({ action: 'saveUser', ...data });
-    return true;
+    const res = await apiFetch({ action: 'saveUser', ...data });
+    return res && res.success === true;
   } catch (error) {
     return false;
   }
