@@ -1709,23 +1709,37 @@ function RekapScreen({
 
   const isAdmin = user.role.toLowerCase().includes('admin');
 
-  // Filter records by month
+  // Filter records by month and user
   const filteredRecords = records.filter(r => {
+    // Filter by Month
     const dateStr = r.formatted_date || r.Date || r.date || r.tanggal || r.timestamp || '';
     const timestamp = parseDate(dateStr);
     if (!timestamp) return false;
     const date = new Date(timestamp);
     const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    return monthStr === selectedMonth;
+    const matchesMonth = monthStr === selectedMonth;
+
+    // Filter by User (only for Admin)
+    const matchesUser = !isAdmin || !selectedUserEmail || 
+      String(r.email || r.Email || '').trim().toLowerCase() === selectedUserEmail.toLowerCase();
+
+    return matchesMonth && matchesUser;
   });
 
   const filteredReports = reportRecords.filter(r => {
+    // Filter by Month
     const dateStr = r.formatted_date || r.Date || r.date || r.tanggal || r.timestamp || '';
     const timestamp = parseDate(dateStr);
     if (!timestamp) return false;
     const date = new Date(timestamp);
     const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    return monthStr === selectedMonth;
+    const matchesMonth = monthStr === selectedMonth;
+
+    // Filter by User (only for Admin)
+    const matchesUser = !isAdmin || !selectedUserEmail || 
+      String(r.email || r.Email || '').trim().toLowerCase() === selectedUserEmail.toLowerCase();
+
+    return matchesMonth && matchesUser;
   });
 
   const generatePDF = async () => {
@@ -1742,9 +1756,14 @@ function RekapScreen({
 
       // Determine target user info
       let targetUser = user;
-      if (isAdmin && selectedUserEmail) {
-        const found = allUsers.find(u => u.email === selectedUserEmail);
-        if (found) targetUser = found;
+      let isAllEmployees = false;
+      if (isAdmin) {
+        if (selectedUserEmail) {
+          const found = allUsers.find(u => u.email === selectedUserEmail);
+          if (found) targetUser = found;
+        } else {
+          isAllEmployees = true;
+        }
       }
 
       // Set default font to helvetica (Arial alternative)
@@ -1758,21 +1777,27 @@ function RekapScreen({
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const startY = 35;
-      doc.text(`Nama: ${targetUser.name}`, 14, startY);
-      doc.text(`Jabatan: ${targetUser.role}`, 14, startY + 5);
+      
+      if (isAllEmployees) {
+        doc.text(`Pegawai: Semua Pegawai`, 14, startY);
+        doc.text(`Unit Kerja: Pemerintah Desa`, 14, startY + 5);
+      } else {
+        doc.text(`Nama: ${targetUser.name}`, 14, startY);
+        doc.text(`Jabatan: ${targetUser.role}`, 14, startY + 5);
+      }
       const monthDate = new Date(selectedMonth + '-02'); // Use day 02 to avoid UTC shift to previous month
       doc.text(`Periode: ${monthDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`, 14, startY + 10);
       doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} pukul ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`, 14, startY + 15);
       
       // Sorting records by date (ascending)
       const sortedRecords = [...filteredRecords].sort((a, b) => 
-        parseDate(a.Date || a.date || a.tanggal || a.timestamp) - 
-        parseDate(b.Date || b.date || b.tanggal || b.timestamp)
+        parseDate(a.formatted_date || a.timestamp || a.Timestamp || a.Date || a.date || a.tanggal || 0) - 
+        parseDate(b.formatted_date || b.timestamp || b.Timestamp || b.Date || b.date || b.tanggal || 0)
       );
       
       const sortedReports = [...filteredReports].sort((a, b) => 
-        parseDate(a.Date || a.date || a.tanggal || a.timestamp) - 
-        parseDate(b.Date || b.date || b.tanggal || b.timestamp)
+        parseDate(a.formatted_date || a.timestamp || a.Timestamp || a.Date || a.date || a.tanggal || 0) - 
+        parseDate(b.formatted_date || b.timestamp || b.Timestamp || b.Date || b.date || b.tanggal || 0)
       );
 
       // Attendance Table
@@ -1847,7 +1872,11 @@ function RekapScreen({
       doc.text('Pembuat Laporan,', pageWidth * 0.25, sigY, { align: 'center' });
       doc.text('Verifikator Laporan,', pageWidth * 0.75, sigY, { align: 'center' });
       
-      doc.text(`(${targetUser.name})`, pageWidth * 0.25, sigY + 25, { align: 'center' });
+      if (isAllEmployees) {
+        doc.text(`(Administrator)`, pageWidth * 0.25, sigY + 25, { align: 'center' });
+      } else {
+        doc.text(`(${targetUser.name})`, pageWidth * 0.25, sigY + 25, { align: 'center' });
+      }
       doc.text(`(${secretaryName})`, pageWidth * 0.75, sigY + 25, { align: 'center' });
 
       // Row 2: Mengetahui Kepala Desa (Centered)
