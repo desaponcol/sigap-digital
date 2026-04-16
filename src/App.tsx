@@ -128,7 +128,7 @@ const parseDate = (dateVal: any): number => {
           Number(ymd[1]), 
           Number(ymd[2]) - 1, 
           Number(ymd[3]),
-          timeMatch ? Number(timeMatch[1]) : 0,
+          timeMatch ? Number(timeMatch[1]) : 12, // Default to 12 PM if no time is provided
           timeMatch ? Number(timeMatch[2]) : 0,
           timeMatch ? Number(timeMatch[3] || 0) : 0
         );
@@ -152,7 +152,7 @@ const parseDate = (dateVal: any): number => {
             year, 
             month - 1, 
             day,
-            timeMatch ? Number(timeMatch[1]) : 0,
+            timeMatch ? Number(timeMatch[1]) : 12, // Default to 12 PM if no time is provided
             timeMatch ? Number(timeMatch[2]) : 0,
             timeMatch ? Number(timeMatch[3] || 0) : 0
           );
@@ -1711,7 +1711,7 @@ function RekapScreen({
 
   // Filter records by month
   const filteredRecords = records.filter(r => {
-    const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+    const dateStr = r.formatted_date || r.Date || r.date || r.tanggal || r.timestamp || '';
     const timestamp = parseDate(dateStr);
     if (!timestamp) return false;
     const date = new Date(timestamp);
@@ -1720,7 +1720,7 @@ function RekapScreen({
   });
 
   const filteredReports = reportRecords.filter(r => {
-    const dateStr = r.Date || r.date || r.tanggal || r.timestamp || '';
+    const dateStr = r.formatted_date || r.Date || r.date || r.tanggal || r.timestamp || '';
     const timestamp = parseDate(dateStr);
     if (!timestamp) return false;
     const date = new Date(timestamp);
@@ -1783,7 +1783,7 @@ function RekapScreen({
       const attColumn = ["No", "Tanggal", "Status", "Lokasi"];
       const attRows = sortedRecords.map((record: any, index) => [
         index + 1,
-        formatDateIndo(record.timestamp || record.Timestamp || record.Date || record.date || record.tanggal || '-'),
+        formatDateIndo(record.formatted_date || record.timestamp || record.Timestamp || record.Date || record.date || '-'),
         record.Status || record.status || '-',
         record.Location || record.location || record.lokasi || '-'
       ]);
@@ -1813,7 +1813,7 @@ function RekapScreen({
       const repColumn = ["No", "Tanggal", "Detail Kegiatan", "Output"];
       const repRows = sortedReports.map((record: any, index) => [
         index + 1,
-        formatDateIndo(record.timestamp || record.Timestamp || record.Date || record.date || record.tanggal || '-'),
+        formatDateIndo(record.formatted_date || record.timestamp || record.Timestamp || record.Date || record.date || '-'),
         record.Detail || record.detail || record.kegiatan || '-',
         record.Output || record.output || record.hasil || '-'
       ]);
@@ -2003,8 +2003,8 @@ function RekapScreen({
               )}
               {[...filteredRecords]
                 .sort((a, b) => {
-                  const tB = parseDate(b.timestamp || b.Timestamp || b.Date || b.date || 0);
-                  const tA = parseDate(a.timestamp || a.Timestamp || a.Date || a.date || 0);
+                  const tB = parseDate(b.formatted_date || b.timestamp || b.Timestamp || b.Date || b.date || 0);
+                  const tA = parseDate(a.formatted_date || a.timestamp || a.Timestamp || a.Date || a.date || 0);
                   return tB - tA;
                 })
                 .map((record) => (
@@ -2022,7 +2022,7 @@ function RekapScreen({
                       <div className="flex items-center gap-2 mb-1">
                         <div className="flex flex-col">
                           <span className="text-base font-black text-on-surface">
-                            {formatDateIndo(record.timestamp || record.Timestamp || record.Date || record.date)}
+                            {formatDateIndo(record.formatted_date || record.timestamp || record.Timestamp || record.Date || record.date)}
                           </span>
                           <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
                             {formatDateTimeIndo(record.timestamp || record.Timestamp || record.Date || record.date).includes('WIB') 
@@ -2057,9 +2057,9 @@ function RekapScreen({
               )}
               {[...filteredReports]
                 .sort((a, b) => {
-                  const timeB = parseDate(b.timestamp || b.Timestamp || b.Date || b.date || b.tanggal || 0);
-                  const timeA = parseDate(a.timestamp || a.Timestamp || a.Date || a.date || a.tanggal || 0);
-                  return timeB - timeA;
+                  const tB = parseDate(b.formatted_date || b.timestamp || b.Timestamp || b.Date || b.date || 0);
+                  const tA = parseDate(a.formatted_date || a.timestamp || a.Timestamp || a.Date || a.date || 0);
+                  return tB - tA;
                 })
                 .map((report) => (
                 <div key={report.id} className="bg-surface-container-lowest p-5 rounded-xl space-y-3 border border-outline-variant/10 shadow-sm group active:scale-[0.98] transition-all">
@@ -2070,7 +2070,7 @@ function RekapScreen({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-base font-black text-on-surface">
-                          {formatDateIndo(report.timestamp || report.Timestamp || report.Date || report.date || report.tanggal)}
+                          {formatDateIndo(report.formatted_date || report.timestamp || report.Timestamp || report.Date || report.date)}
                         </span>
                         <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
                           {formatDateTimeIndo(report.timestamp || report.Timestamp || report.Date || report.date).includes('WIB') 

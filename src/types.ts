@@ -24,6 +24,7 @@ export interface AttendanceRecord {
   location?: string;
   Location?: string;
   lokasi?: string;
+  formatted_date?: string;
 }
 
 export interface ReportRecord {
@@ -39,6 +40,7 @@ export interface ReportRecord {
   Detail?: string;
   Output?: string;
   Timestamp?: string;
+  formatted_date?: string;
 }
 
 export interface AppSettings {
