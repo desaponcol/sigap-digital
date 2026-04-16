@@ -1,4 +1,4 @@
-const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6Q6IYtA4P1rbi355a0yjPpjOSiePOUeElrxdAGnnhCUf5U9yp91cefnSoUf33tDYq/exec';
+const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk9wTLKn97pVE8bHLVntRWpUr3dcp4oydmKStSR6TgRjIozD86hR5uqyR3Pag53RIq/exec';
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybQyFFcq4pU0h-M9jiKH7_-6xjirMn-d_hW9CIwE_YSQYsxRAX4FM97Ay0apBhysSu/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
@@ -167,6 +167,15 @@ export async function fetchSettings() {
 export async function saveSettings(data: any) {
   try {
     await apiFetch({ action: 'saveSettings', ...data });
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export async function saveUser(data: { name: string; email: string; pass: string; role: string }) {
+  try {
+    await apiFetch({ action: 'saveUser', ...data });
     return true;
   } catch (error) {
     return false;

@@ -29,11 +29,13 @@ import {
   Check,
   LogOut,
   Info,
-  MessageCircle
+  MessageCircle,
+  UserPlus,
+  X
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { type Screen, type User, type AttendanceRecord, type ReportRecord, type AppSettings } from './types';
-import { fetchAttendanceRecords, fetchReportRecords, saveAttendance, saveReport, loginUser, fetchSettings, saveSettings, fetchUsers, initVillageConfig } from './services/api';
+import { fetchAttendanceRecords, fetchReportRecords, saveAttendance, saveReport, loginUser, fetchSettings, saveSettings, fetchUsers, initVillageConfig, saveUser } from './services/api';
 
 // Helper for distance calculation (Haversine formula)
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -1261,6 +1263,133 @@ function LaporanScreen({ onSave, onError, userEmail, reportRecords, refreshRecor
   );
 }
 
+function AddEmployeeModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    pass: '',
+    role: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!formData.name || !formData.email || !formData.pass || !formData.role) {
+      setError('Harap isi semua bidang');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await saveUser(formData);
+      if (success) {
+        onSuccess();
+      } else {
+        setError('Gagal menambahkan karyawan. Cek koneksi atau izin script.');
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan sistem');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="bg-dark-accent w-full max-w-md rounded-3xl overflow-hidden border border-white/10 shadow-2xl"
+      >
+        <div className="p-6 border-b border-white/5 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center">
+              <UserPlus className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-white">Tambah Karyawan</h3>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Registrasi Pegawai Baru</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-all">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-500 text-xs font-bold">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Nama Lengkap</label>
+            <input 
+              type="text" 
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full p-4 bg-[#0A0B0E] border border-white/5 rounded-2xl text-white text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              placeholder="Contoh: Budi Santoso"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Email</label>
+            <input 
+              type="email" 
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full p-4 bg-[#0A0B0E] border border-white/5 rounded-2xl text-white text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              placeholder="budi@desa.go.id"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Password</label>
+            <input 
+              type="text" 
+              value={formData.pass}
+              onChange={(e) => setFormData({...formData, pass: e.target.value})}
+              className="w-full p-4 bg-[#0A0B0E] border border-white/5 rounded-2xl text-white text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              placeholder="Min. 6 karakter"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Jabatan / Role</label>
+            <input 
+              type="text" 
+              value={formData.role}
+              onChange={(e) => setFormData({...formData, role: e.target.value})}
+              className="w-full p-4 bg-[#0A0B0E] border border-white/5 rounded-2xl text-white text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              placeholder="Contoh: Staff Keuangan"
+            />
+          </div>
+
+          <button 
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-4 bg-primary text-dark-accent font-black uppercase tracking-widest text-xs rounded-2xl shadow-xl shadow-primary/10 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+          >
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Data Pegawai'}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function SettingsScreen({ onSave, onError }: { onSave: () => void, onError: (msg: string) => void }) {
   const [settings, setSettings] = useState<AppSettings>({
     office_lat: -7.729756740246309,
@@ -1570,6 +1699,7 @@ function RekapScreen({
 }) {
   const [activeTab, setActiveTab] = useState<'RIWAYAT' | 'LAPORAN'>('RIWAYAT');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const isAdmin = user.role.toLowerCase().includes('admin');
 
@@ -1762,8 +1892,17 @@ function RekapScreen({
       {/* Admin Filters */}
       {isAdmin && (
         <div className="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/10 shadow-sm space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-secondary ml-1">Manajemen Pegawai</label>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-dark-accent transition-all"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Tambah Karyawan
+            </button>
+          </div>
           <div className="space-y-2">
-            <label className="block text-[10px] font-black uppercase tracking-widest text-secondary ml-1">Pilih Pegawai</label>
             <select 
               value={selectedUserEmail}
               onChange={(e) => setSelectedUserEmail(e.target.value)}
@@ -1777,6 +1916,18 @@ function RekapScreen({
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {showAddModal && (
+          <AddEmployeeModal 
+            onClose={() => setShowAddModal(false)} 
+            onSuccess={() => {
+              setShowAddModal(false);
+              onRefresh();
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 flex bg-surface-container-lowest p-1.5 rounded-2xl border border-outline-variant/10 shadow-sm">
