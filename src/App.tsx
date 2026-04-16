@@ -75,7 +75,8 @@ const formatDateIndo = (dateVal: any) => {
     else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/'))) {
       const num = Number(dateVal);
       if (num > 30000 && num < 60000) {
-        date = new Date(Math.round((num - 25569) * 86400 * 1000));
+        // Shift by 7 hours to ensure it stays in the correct WIB day
+        date = new Date(Math.round((num - 25569) * 86400 * 1000) + (7 * 60 * 60 * 1000));
       }
     }
 
@@ -226,7 +227,8 @@ const normalizeDate = (val: any): string => {
   if (typeof val === 'number' || (!isNaN(Number(val)) && !String(val).includes('-') && !String(val).includes('/') && !String(val).includes(':') && !String(val).includes(' '))) {
     const num = Number(val);
     if (num > 30000 && num < 60000) {
-      const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+      // Add 7 hours to serial number to avoid 1-day back shift
+      const d = new Date(Math.round((num - 25569) * 86400 * 1000) + (7 * 60 * 60 * 1000));
       return getLocalDateString(d);
     }
   }
