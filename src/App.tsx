@@ -261,6 +261,11 @@ export default function App() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // Expose to window for sub-components
+  useEffect(() => {
+    (window as any).showNotification = showNotification;
+  }, []);
+
   useEffect(() => {
     if (isLoggedIn) {
       loadRecords();
@@ -1924,6 +1929,9 @@ function RekapScreen({
             onSuccess={() => {
               setShowAddModal(false);
               onRefresh();
+              if (typeof (window as any).showNotification === 'function') {
+                (window as any).showNotification('Karyawan berhasil ditambahkan!');
+              }
             }}
           />
         )}
