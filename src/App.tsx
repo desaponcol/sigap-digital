@@ -2074,7 +2074,11 @@ function RekapScreen({
                 </div>
               )}
               {[...filteredRecords]
-                .sort((a, b) => parseDate(b.Date || b.date || b.tanggal || b.timestamp) - parseDate(a.Date || a.date || a.tanggal || a.timestamp))
+                .sort((a, b) => {
+                  const tB = parseDate(b.timestamp || b.Timestamp || b.Date || b.date || 0);
+                  const tA = parseDate(a.timestamp || a.Timestamp || a.Date || a.date || 0);
+                  return tB - tA;
+                })
                 .map((record) => (
                 <div key={record.id} className="bg-surface-container-lowest p-5 rounded-xl flex items-center justify-between border border-outline-variant/10 shadow-sm group active:scale-[0.98] transition-all">
                   <div className="flex items-center gap-5">
@@ -2090,12 +2094,12 @@ function RekapScreen({
                       <div className="flex items-center gap-2 mb-1">
                         <div className="flex flex-col">
                           <span className="text-base font-black text-on-surface">
-                            {formatDateIndo(record.Date || record.date || record.tanggal || record.timestamp)}
+                            {formatDateIndo(record.timestamp || record.Timestamp || record.Date || record.date)}
                           </span>
                           <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
-                            {formatDateTimeIndo(record.timestamp || record.Timestamp || record.Date || record.date).split(' ').pop() === 'WIB' 
+                            {formatDateTimeIndo(record.timestamp || record.Timestamp || record.Date || record.date).includes('WIB') 
                               ? formatDateTimeIndo(record.timestamp || record.Timestamp || record.Date || record.date).split(' ').slice(-2).join(' ') 
-                              : ''}
+                              : '00:00:00 WIB'}
                           </span>
                         </div>
                         <span className={cn(
@@ -2124,7 +2128,11 @@ function RekapScreen({
                 </div>
               )}
               {[...filteredReports]
-                .sort((a, b) => parseDate(b.Date || b.date || b.tanggal || b.timestamp) - parseDate(a.Date || a.date || a.tanggal || a.timestamp))
+                .sort((a, b) => {
+                  const timeB = parseDate(b.timestamp || b.Timestamp || b.Date || b.date || b.tanggal || 0);
+                  const timeA = parseDate(a.timestamp || a.Timestamp || a.Date || a.date || a.tanggal || 0);
+                  return timeB - timeA;
+                })
                 .map((report) => (
                 <div key={report.id} className="bg-surface-container-lowest p-5 rounded-xl space-y-3 border border-outline-variant/10 shadow-sm group active:scale-[0.98] transition-all">
                   <div className="flex items-center justify-between">
@@ -2134,12 +2142,12 @@ function RekapScreen({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-base font-black text-on-surface">
-                          {formatDateIndo(report.Date || report.date || report.tanggal)}
+                          {formatDateIndo(report.timestamp || report.Timestamp || report.Date || report.date || report.tanggal)}
                         </span>
                         <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
-                          {formatDateTimeIndo(report.timestamp || report.Timestamp).split(' ').pop() === 'WIB' 
-                            ? formatDateTimeIndo(report.timestamp || report.Timestamp).split(' ').slice(-2).join(' ') 
-                            : ''}
+                          {formatDateTimeIndo(report.timestamp || report.Timestamp || report.Date || report.date).includes('WIB') 
+                            ? formatDateTimeIndo(report.timestamp || report.Timestamp || report.Date || report.date).split(' ').slice(-2).join(' ') 
+                            : '00:00:00 WIB'}
                         </span>
                       </div>
                     </div>
