@@ -176,8 +176,14 @@ export async function saveSettings(data: any) {
 export async function saveUser(data: { name: string; email: string; pass: string; role: string }) {
   try {
     const res = await apiFetch({ action: 'saveUser', ...data });
-    return res && res.success === true;
+    if (res && res.success === true) {
+      return { success: true };
+    }
+    return { 
+      success: false, 
+      error: res?.error || 'Gagal menyimpan data ke server.' 
+    };
   } catch (error) {
-    return false;
+    return { success: false, error: 'Koneksi ke script gagal. Pastikan izin "Anyone" sudah aktif.' };
   }
 }

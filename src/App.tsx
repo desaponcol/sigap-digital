@@ -1284,11 +1284,11 @@ function AddEmployeeModal({ onClose, onSuccess }: { onClose: () => void, onSucce
 
     setIsSubmitting(true);
     try {
-      const success = await saveUser(formData);
-      if (success) {
+      const result = await saveUser(formData);
+      if (result.success) {
         onSuccess();
       } else {
-        setError('Gagal menambahkan karyawan. Cek koneksi atau izin script.');
+        setError(result.error || 'Gagal menambahkan karyawan.');
       }
     } catch (err) {
       setError('Terjadi kesalahan sistem');
