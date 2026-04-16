@@ -290,29 +290,51 @@ export default function App() {
   const loadRecords = async (forceUserEmail?: string) => {
     setIsLoading(true);
     try {
-      // Untuk validasi pencegahan ganda, kita butuh data user yang sedang login
-      // Jika forceUserEmail ada, berarti kita sedang memvalidasi data user tersebut
-      const emailToFetch = forceUserEmail || (user.role.toLowerCase().includes('admin') 
+      const isAdminCheck = user.role.toLowerCase().includes('admin');
+      // Tentukan email mana yang harus difetch
+      const emailToFetch = forceUserEmail || (isAdminCheck 
         ? (selectedUserEmail || '') 
         : user.email);
 
-      const [attData, repData] = await Promise.all([
+      const [attDataRaw, repDataRaw] = await Promise.all([
         fetchAttendanceRecords(emailToFetch),
         fetchReportRecords(emailToFetch)
       ]);
       
-      // Jika ini adalah fetch untuk admin melihat rekap, simpan ke state utama
+      const attData = Array.isArray(attDataRaw) ? attDataRaw : [];
+      const repData = Array.isArray(repDataRaw) ? repDataRaw : [];
+
+      // Proteksi Tambahan di Frontend: 
+      // Jika bukan admin, pastikan data yang masuk ke state HANYA milik user tersebut
+      // Ini mencegah data "bocor" jika backend mengirim semua data tanpa filter
+      const finalAtt = isAdminCheck && !forceUserEmail
+        ? attData 
+        : attData.filter(r => {
+            const rEmail = String(r.email || r.Email || '').trim().toLowerCase();
+            const targetEmail = (forceUserEmail || user.email).trim().toLowerCase();
+            return rEmail === targetEmail;
+          });
+
+      const finalRep = isAdminCheck && !forceUserEmail
+        ? repData 
+        : repData.filter(r => {
+            const rEmail = String(r.email || r.Email || '').trim().toLowerCase();
+            const targetEmail = (forceUserEmail || user.email).trim().toLowerCase();
+            return rEmail === targetEmail;
+          });
+      
       if (!forceUserEmail) {
-        setRecords(attData || []);
-        setReportRecords(repData || []);
+        setRecords(finalAtt);
+        setReportRecords(finalRep);
       }
       
-      return { attData: attData || [], repData: repData || [] };
+      return { attData: finalAtt, repData: finalRep };
     } catch (error: any) {
       console.error('Error loading data:', error);
       if (error.message?.includes('Failed to fetch') || error.message?.includes('Koneksi')) {
         showNotification('Gagal mengambil data. Pastikan Anda sudah login Google.', 'error');
       }
+      // Jangan timpa state lama dengan array kosong jika fetch gagal
       return { attData: [], repData: [] };
     } finally {
       setIsLoading(false);
