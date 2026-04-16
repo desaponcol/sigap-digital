@@ -1,5 +1,5 @@
 const MASTER_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbys0cC1_mdc02-fv71jnfw9Pgfm6rSI57ZxNdpTYtUE9hPazn0eC86ofdc8NKaQ4qphww/exec';
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbys0cC1_mdc02-fv71jnfw9Pgfm6rSI57ZxNdpTYtUE9hPazn0eC86ofdc8NKaQ4qphww/exec';
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjOGid6Sb52ZXUkN50g0oqQvWySZd7wGdme0P2tvlKHtvr-hHifOK5W13Nx-IBrsEG/exec';
 
 // Fungsi untuk mendapatkan SCRIPT_URL secara dinamis dari Master API
 export async function initVillageConfig(): Promise<{success: boolean, error?: string}> {
