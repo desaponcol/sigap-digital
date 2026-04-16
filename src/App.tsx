@@ -311,7 +311,7 @@ export default function App() {
         ? attData 
         : attData.filter(r => {
             const rEmail = String(r.email || r.Email || '').trim().toLowerCase();
-            const targetEmail = (forceUserEmail || user.email).trim().toLowerCase();
+            const targetEmail = String(forceUserEmail || user.email || '').trim().toLowerCase();
             return rEmail === targetEmail;
           });
 
@@ -319,7 +319,7 @@ export default function App() {
         ? repData 
         : repData.filter(r => {
             const rEmail = String(r.email || r.Email || '').trim().toLowerCase();
-            const targetEmail = (forceUserEmail || user.email).trim().toLowerCase();
+            const targetEmail = String(forceUserEmail || user.email || '').trim().toLowerCase();
             return rEmail === targetEmail;
           });
       
