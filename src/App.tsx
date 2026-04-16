@@ -65,59 +65,20 @@ const MOCK_RECORDS: AttendanceRecord[] = [];
 
 const formatDateIndo = (dateVal: any) => {
   if (!dateVal || dateVal === '-') return '-';
-  
   try {
-    let date: Date | null = null;
-
-    if (dateVal instanceof Date) {
-      date = dateVal;
-    } 
-    else if (typeof dateVal === 'number' || (!isNaN(Number(dateVal)) && !String(dateVal).includes('-') && !String(dateVal).includes('/'))) {
-      const num = Number(dateVal);
-      if (num > 30000 && num < 60000) {
-        // Shift by 7 hours to ensure it stays in the correct WIB day
-        date = new Date(Math.round((num - 25569) * 86400 * 1000) + (7 * 60 * 60 * 1000));
-      }
-    }
-
-    if (!date && typeof dateVal === 'string') {
-      const str = dateVal.trim();
-      
-      const ymd = str.match(/^(\d{4})[/\- ](\d{1,2})[/\- ](\d{1,2})/);
-      if (ymd) {
-        date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
-      } else {
-        const dmy = str.match(/^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{4})/);
-        if (dmy) {
-          date = new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
-        } else {
-          // If it's an ISO string from GAS (e.g. 2026-04-15T17:00:00.000Z)
-          // we add 7 hours (WIB) before getting the date to avoid day shift
-          const d = new Date(str);
-          if (!isNaN(d.getTime())) {
-            if (str.includes('T') && str.endsWith('Z')) {
-              // Shift to WIB for display if it's a UTC string
-              date = new Date(d.getTime() + (7 * 60 * 60 * 1000));
-            } else {
-              date = d;
-            }
-          }
-        }
-      }
-    }
-
-    if (date && !isNaN(date.getTime())) {
-      return new Intl.DateTimeFormat('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      }).format(date);
-    }
+    const timestamp = parseDate(dateVal);
+    if (!timestamp) return String(dateVal);
+    
+    const date = new Date(timestamp);
+    return new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }).format(date);
   } catch (e) {
     console.error('Error formatting date:', dateVal, e);
+    return String(dateVal);
   }
-  
-  return String(dateVal);
 };
 
 const formatDateTimeIndo = (dateVal: any) => {
@@ -222,44 +183,9 @@ const getLocalDateString = (date = new Date()) => {
 
 const normalizeDate = (val: any): string => {
   if (!val || val === '-') return '';
-  
-  // Handle Excel/Google Sheets Serial Numbers
-  if (typeof val === 'number' || (!isNaN(Number(val)) && !String(val).includes('-') && !String(val).includes('/') && !String(val).includes(':') && !String(val).includes(' '))) {
-    const num = Number(val);
-    if (num > 30000 && num < 60000) {
-      // Add 7 hours to serial number to avoid 1-day back shift
-      const d = new Date(Math.round((num - 25569) * 86400 * 1000) + (7 * 60 * 60 * 1000));
-      return getLocalDateString(d);
-    }
-  }
-
-  const str = String(val).trim();
-  
-  // Match DD/MM/YYYY or DD-MM-YYYY or DD MM YYYY (Indonesian Format)
-  // Also handles if there is time after the date (e.g. 15/04/2026 08:00:00)
-  const dmy = str.match(/^(\d{1,2})[/\- ](\d{1,2})[/\- ](\d{4})/);
-  if (dmy) {
-    return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
-  }
-
-  // Match YYYY-MM-DD or YYYY/MM/DD or YYYY MM DD
-  const ymd = str.match(/^(\d{4})[/\- ](\d{1,2})[/\- ](\d{1,2})/);
-  if (ymd) {
-    return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
-  }
-
-  // Fallback to standard JS parsing
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    if (str.includes('T') && str.endsWith('Z')) {
-      // Shift to WIB if it's a UTC string from GAS
-      const shifted = new Date(d.getTime() + (7 * 60 * 60 * 1000));
-      return getLocalDateString(shifted);
-    }
-    return getLocalDateString(d);
-  }
-
-  return '';
+  const timestamp = parseDate(val);
+  if (!timestamp) return '';
+  return getLocalDateString(new Date(timestamp));
 };
 
 export default function App() {
@@ -1857,7 +1783,7 @@ function RekapScreen({
       const attColumn = ["No", "Tanggal", "Status", "Lokasi"];
       const attRows = sortedRecords.map((record: any, index) => [
         index + 1,
-        formatDateIndo(record.Date || record.date || record.tanggal || record.timestamp || '-'),
+        formatDateIndo(record.timestamp || record.Timestamp || record.Date || record.date || record.tanggal || '-'),
         record.Status || record.status || '-',
         record.Location || record.location || record.lokasi || '-'
       ]);
@@ -1887,7 +1813,7 @@ function RekapScreen({
       const repColumn = ["No", "Tanggal", "Detail Kegiatan", "Output"];
       const repRows = sortedReports.map((record: any, index) => [
         index + 1,
-        formatDateIndo(record.Date || record.date || record.tanggal || '-'),
+        formatDateIndo(record.timestamp || record.Timestamp || record.Date || record.date || record.tanggal || '-'),
         record.Detail || record.detail || record.kegiatan || '-',
         record.Output || record.output || record.hasil || '-'
       ]);
